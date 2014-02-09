@@ -3,14 +3,136 @@
   <head>
     <title>Histree</title>
     <style>
-      body {min-width: 250px;}
+      body {
+        min-width: 450px;
+        font-family: 'Lucida Grande', sans-serif;
+        font-size: 75%;
+        margin: 0px;
+      }
+      ol#visit-list {
+        list-style-type: none;
+        -webkit-padding-start: 0px;
+        margin: 0px;
+      }
+      .entry .visit-entry {
+        -webkit-padding-start: 20px;
+        background-position-y: center;
+        background-repeat: no-repeat;
+        background-size: 16px;
+        line-height: 1.75em;
+        padding-bottom: 1px;
+      }
+      li.entry:hover {
+        background-color: AliceBlue;
+      }
+      .entry .title {
+        display: inline;
+        white-space: nowrap;
+      }
+      .entry .domain {
+        display: inline;
+        color: rgb(151, 156, 160);
+        overflow: hidden;
+        white-space: nowrap;
+        padding-left: 6px;
+        padding-right: 6px;
+      }
+      .title a {
+        color: rgb(48, 57, 66);
+        text-decoration: none;
+      }
+      #indent1 {
+        padding-left: 20px;
+      }
+      #indent2 {
+        padding-left: 40px;
+      }
+      #indent3 {
+        padding-left: 60px;
+      }
     </style>
     <script src='popup.js'></script>
   </head>
 
   <body>
-    <h2>Histree:</h2>
-    <div id="inner_div"></div>
+    <div id="inner-div">
+      <ol id="visit-list">
+      </ol>
+    </div>
   </body>
 </html>
 
+<!-- style="background-image: -webkit-image-set( url( chrome://favicon/size/16@1x/https://play.google.com/music/listen?authuser#/ap/queue) 1x, url(chrome://favicon/size/16@2x/https://play.google.com/music/listen?authuser#/ap/queue) 2x);">
+            url(chrome://favicon/size/16@1x/https://play.google.com/music/listen?authuser#/ap/queue);">
+url(http://i.huffpost.com/gen/964776/thumbs/o-CATS-KILL-BILLIONS-facebook.jpg);"> 
+
+        <li class="entry">
+        <div class="visit-entry"
+            style="background-image: url(http://g.etfv.co/http://www.google.com);">
+            <div class="title">
+              <a href="https://play.google.com/music/listen?authuser#/ap/queue"
+                title="Listen Now - Google Play Music">
+                Listen Now - Google Play Music
+              </a>
+            </div>
+            <div class="domain">
+              play.google.com
+            </div>
+          </div>
+        </li>
+        <li class="entry" id="indent1">
+          <div class="visit-entry"
+            style="background-image: url(http://g.etfv.co/http://www.google.com);">
+            <div class="title">
+              <a href="https://play.google.com/music/listen?authuser#/ap/queue"
+                title="Listen Now - Google Play Music">
+                Listen Now - Google Play Music
+              </a>
+            </div>
+            <div class="domain">
+              play.google.com
+            </div>
+          </div>
+        </li>
+        <li class="entry" id="indent2">
+          <div class="visit-entry"
+            style="background-image: url(http://g.etfv.co/http://www.google.com);">
+            <div class="title">
+              <a href="https://play.google.com/music/listen?authuser#/ap/queue"
+                title="Listen Now - Google Play Music">
+                Listen Now - Google Play Music
+              </a>
+            </div>
+            <div class="domain">
+              play.google.com
+            </div>
+          </div>
+        </li>
+        <li class="entry" id="indent3">
+          <div class="visit-entry"
+            style="background-image: url(http://g.etfv.co/http://www.google.com);">
+            <div class="title">
+              <a href="https://play.google.com/music/listen?authuser#/ap/queue"
+                title="Listen Now - Google Play Music">
+                Listen Now - Google Play Music
+              </a>
+            </div>
+            <div class="domain">
+              play.google.com
+            </div>
+          </div>
+        </li>
+        <li class="entry" id="indent2">
+          <div class="visit-entry"
+            style="background-image: url(http://g.etfv.co/http://www.google.com);">
+            <div class="title">
+              <a href="https://play.google.com/music/listen?authuser#/ap/queue"
+                title="Listen Now - Google Play Music">
+                Listen Now - Google Play Music
+              </a>
+            </div>
+            <div class="domain">
+              play.google.com
+            </div>
+          </div>
+        </li>

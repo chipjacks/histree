@@ -13,16 +13,17 @@ if (!Date.now) {
   };
 }
 
-function pageData(tab) {
+function pageData(url, title, favicon, timestamp) {
   // class to store data for histree nodes
-  this.lastVisit = Date.now();
-  this.url = tab.url;
-  this.title = tab.title;
-  this.favicon = tab.favIconUrl;
+  this.lastVisit = timestamp;
+  this.url = url;
+  this.title = title;
+  this.favicon = favicon;
 }
 
-pageData.prototype.update() {
-  this.lastVisit = Date.now();
+pageData.prototype.update = function (timeStamp) {
+  // updates histree node when user revisits it
+  this.lastVisit = timeStamp;
 }
 
 function Node(parent, data) {
@@ -33,6 +34,9 @@ function Node(parent, data) {
   if (this.parent) {
     this.parent.children.push(this);
   }
+  if (debug) {
+    bkg.console.log("Node added to tree: " + this);
+  }
 }
 
 function Tree(root_data) {
@@ -40,14 +44,28 @@ function Tree(root_data) {
   // The tree keeps track of a currentNode, our current location on the tree.
   this.root = new Node(null, root_data);
   this.currentNode = this.root;
+  this.urls = {};
 }
 
 Tree.prototype.addNode = function (data) {
   // Adds a child node to tree's currentNode, containing data
   node = new Node(this.currentNode, data);
   this.currentNode = node;
+  this.urls[data.url] = node;
   return node;
 }
+
+Tree.prototype.updateNode = function (url, timestamp) {
+  // Looks for node with given url. If found, update it's lastVisit and sets it
+  // to be currentNode. Otherwise raise exception.
+  node = this.urls[url];
+  if (!node) {
+    throw "Tree.updateNode failed: invalid url";
+  }
+  node.data.lastVisit = timestamp;
+  this.currentNode = node;
+}
+
 
 Tree.prototype.toString = function () {
   return this.root.toString();
@@ -55,24 +73,8 @@ Tree.prototype.toString = function () {
   
 
 Node.prototype.toString = function () {
-  return this.data + "\n" + this.children.join("\n");
+  return this.data.title + "\n" + this.children.join("\n");
 }
-
-function processNewTab(tab) {
-  if (debug) {
-    bkg.console.log("New tab created.\n" +
-      "id = " + tab.id +
-      "\nhighlighted = " + tab.highlighted +
-      "\nactive = " + tab.active +
-      "\nurl = " + tab.url +
-      "\nfaviconUrl = " + tab.faviconUrl +
-      "\nstatus = " + tab.status);
-  }
-  // Create a new tree to store the histree for this tab.
-  histrees[tab.id] = new Tree(tab.url);
-}
-
-chrome.tabs.onCreated.addListener(processNewTab);
 
 function processNav(details) {
   if (debug) {
@@ -84,21 +86,37 @@ function processNav(details) {
       "\ntransitionType = " + details.transitionType +
       "\ntransitionQualifiers = " + details.transitionQualifiers +
       "\nparentFrameId = " + details.parentFrameId +
-      "\ntimeStamp = " + details.timeStamp);
+      "\ntimeStamp = " + details.timeStamp
+      );
   }
-  // Add URL to tree
-  if (details.transitionType == "link" || details.transitionType == "typed") {
-    chrome.tabs.query({active: true}, function (tabs) {
-      histrees[tabs[0].id].addNode(details.url);
-    });
+  if (details.transitionQualifiers != "forward_back" &&
+    details.transitionType != "link" && details.transitionType != "typed") {
+    return;
   }
+  // Find histree for this tab
+  var histree = histrees[details.tabId];
+  chrome.tabs.get(details.tabId, function (tab) {
+    var histree = histrees[tab.id];
+    if (!histree) {
+      // initialize the histree
+      histrees[tab.id] = new Tree(new pageData(details.url, tab.title,
+        tab.favIconUrl, details.timestamp));
+    } else {
+      if (histree.urls[details.url]) {
+        // it's already in the histree
+        histree.updateNode(details.url, details.timeStamp);
+      } else {
+//      if (details.transitionQualifiers == "forward_back") {
+//        // should already be in the tree
+//        histree.updateNode(details.url, details.timeStamp)
+//      } else if (details.transitionType == "link" ||
+//        details.transitionType == "typed") {
+        // add new node to tree
+        histree.addNode(new pageData(details.url, tab.title, tab.favIconUrl, 
+          details.timeStamp));
+      }
+    }
+  });
 }
 
 chrome.webNavigation.onCommitted.addListener(processNav);
-
-// if (chrome.webNavigation && chrome.webNavigation.onCommitted) {
-//   chrome.webNavigation.onCommitted.addListener(processNav);
-//   console.log("Added webNavigation onComittedListener");
-// } else {
-//   console.log("webNavigation undefined")
-// }
