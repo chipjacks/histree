@@ -4,16 +4,6 @@ function displayHistree(eventPage) {
   chrome.tabs.query({active: true}, function (tabs) {
     var histree = eventPage.histrees[tabs[0].id];
     displayNode(tabs[0].id, visitList, histree.root, 0);
-//    for (var i=0; i < 10; i++) {
- //     appendVisitEntry(visitList, 
- //       {
- //         url: "http://google.com", 
- //         favicon: "http://g.etfv.co/http://www.google.com",
- //         title: "Google #" + i
- //       },
- //       i % 5
- //       );
- //   }
   });
 }
 
@@ -28,7 +18,7 @@ function displayNode(tabId, list, node, initialIndent) {
     }
   } 
   // then display the node
-  appendVisitEntry(tabId, list, node.data, initialIndent);
+  appendVisitEntry(tabId, list, node.data, initialIndent, node.parent);
 }
 
 function appendVisitEntry(tabId, list, data, indentLevel) {
@@ -39,11 +29,17 @@ function appendVisitEntry(tabId, list, data, indentLevel) {
   
   li.className = "entry";
   li.href = data.url;
-  li.style.paddingLeft = 10 + indentLevel * 20 + "px";
+  li.style.marginLeft = 20 + indentLevel * 20 + "px";
+  li.style.paddingLeft = 5 + "px";
   li.style.cursor = "pointer";
   li.onclick = function () {
     chrome.tabs.update(tabId, {url: data.url});
     eventPage.updateNode(data.url, Date.now);
+  }
+  li.onmouseover = function () {
+    var thumbnail = document.getElementById("thumbnail");
+    thumbnail.src = data.img;
+//    this.innerHTML = this.offsetTop + ", " + this.offsetLeft;
   }
   entry.setAttribute("class", "visit-entry");
   entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
@@ -58,6 +54,7 @@ function appendVisitEntry(tabId, list, data, indentLevel) {
   li.appendChild(entry);
   list.appendChild(li);
 }
+
 
 document.addEventListener('DOMContentLoaded', function () {
   chrome.runtime.getBackgroundPage(displayHistree);

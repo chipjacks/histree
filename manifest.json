@@ -9,12 +9,11 @@
     "history",
     "webNavigation",
     "tabs",
-    "activeTab"
+    "<all_urls>"
    ],
 	  
   "background": {
-    "scripts": ["eventPage.js"],
-    "persistent": false
+    "scripts": ["eventPage.js"]
   },
 
   "browser_action": {

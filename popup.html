@@ -4,10 +4,34 @@
     <title>Histree</title>
     <style>
       body {
-        min-width: 450px;
+        width: 600px;
+        height: 264px;
         font-family: 'Lucida Grande', sans-serif;
         font-size: 75%;
         margin: 0px;
+      }
+      #inner-div {
+        height: 100%;
+      }
+      #info-div {
+        width: 200px;
+        overflow: hidden;
+        float: left;
+        border-right-style: solid;
+        border-right-width: 1px;
+        border-right-color: #DCDCDC;
+        height: 100%;
+      }
+      #link-div {
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: scroll;
+      }
+      #link-svg {
+        height: 100%;
+        width: 100%;
+        position: absolute;
+        z-index: -1;
       }
       ol#visit-list {
         list-style-type: none;
@@ -19,7 +43,7 @@
         background-position-y: center;
         background-repeat: no-repeat;
         background-size: 16px;
-        line-height: 1.75em;
+        line-height: 21px;
         padding-bottom: 1px;
       }
       li.entry:hover {
@@ -41,14 +65,17 @@
         color: rgb(48, 57, 66);
         text-decoration: none;
       }
-      #indent1 {
-        padding-left: 20px;
+      #thumbnail {
+        max-width: 190px;
       }
-      #indent2 {
+      #indent1 {
         padding-left: 40px;
       }
-      #indent3 {
+      #indent2 {
         padding-left: 60px;
+      }
+      #indent3 {
+        padding-left: 80px;
       }
     </style>
     <script src='popup.js'></script>
@@ -56,8 +83,13 @@
 
   <body>
     <div id="inner-div">
-      <ol id="visit-list">
-      </ol>
+      <div id="info-div">
+        <img id="thumbnail">
+      </div>
+      <div id="link-div">
+        <ol id="visit-list">
+        </ol>
+      </div>
     </div>
   </body>
 </html>
@@ -65,6 +97,10 @@
 <!-- style="background-image: -webkit-image-set( url( chrome://favicon/size/16@1x/https://play.google.com/music/listen?authuser#/ap/queue) 1x, url(chrome://favicon/size/16@2x/https://play.google.com/music/listen?authuser#/ap/queue) 2x);">
             url(chrome://favicon/size/16@1x/https://play.google.com/music/listen?authuser#/ap/queue);">
 url(http://i.huffpost.com/gen/964776/thumbs/o-CATS-KILL-BILLIONS-facebook.jpg);"> 
+
+        <svg id="link-svg">
+          <circle cx="10" cy="10" r="1" stroke="green" fill="green" stroke-width="1" />
+        </svg>
 
         <li class="entry">
         <div class="visit-entry"

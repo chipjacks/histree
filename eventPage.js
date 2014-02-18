@@ -3,6 +3,7 @@
 
 var bkg = chrome.extension.getBackgroundPage();
 var debug = true;
+var thumbnails = true;
 
 var histrees = {};
 
@@ -13,12 +14,13 @@ if (!Date.now) {
   };
 }
 
-function pageData(url, title, favicon, timestamp) {
+function pageData(url, title, favicon, timestamp, img) {
   // class to store data for histree nodes
   this.lastVisit = timestamp;
   this.url = url;
   this.title = title;
   this.favicon = favicon;
+  this.img = img;
 }
 
 pageData.prototype.update = function (timeStamp) {
@@ -42,7 +44,12 @@ function Node(parent, data) {
 function Tree(root_data) {
   // Creates a tree with root node containing root_data.
   // The tree keeps track of a currentNode, our current location on the tree.
-  this.root = new Node(null, root_data);
+  if (!root_data) {
+    //create an empty tree
+    this.root = null;
+  } else {
+    this.root = new Node(null, root_data);
+  }
   this.currentNode = this.root;
   this.urls = {};
 }
@@ -50,6 +57,9 @@ function Tree(root_data) {
 Tree.prototype.addNode = function (data) {
   // Adds a child node to tree's currentNode, containing data
   node = new Node(this.currentNode, data);
+  if (!this.root) {
+    this.root = node;
+  }
   this.currentNode = node;
   this.urls[data.url] = node;
   return node;
@@ -71,10 +81,17 @@ Tree.prototype.toString = function () {
   return this.root.toString();
 }
   
-
 Node.prototype.toString = function () {
   return this.data.title + "\n" + this.children.join("\n");
 }
+
+function createAddNavClosure(details) {
+  return function(tab) {
+    addNavToTree(details, tab);
+  };
+}
+
+window.addLastNav = function (tab) {};
 
 function processNav(details) {
   if (debug) {
@@ -89,34 +106,44 @@ function processNav(details) {
       "\ntimeStamp = " + details.timeStamp
       );
   }
+
   if (details.transitionQualifiers != "forward_back" &&
-    details.transitionType != "link" && details.transitionType != "typed") {
+    details.transitionType != "link" && details.transitionType != "typed"
+    && details.transitionType != "generated") {
     return;
   }
-  // Find histree for this tab
-  var histree = histrees[details.tabId];
-  chrome.tabs.get(details.tabId, function (tab) {
+
+  window.addLastNav = createAddNavClosure(details);
+}
+
+function addNavToTree(details, tab) {
     var histree = histrees[tab.id];
     if (!histree) {
       // initialize the histree
-      histrees[tab.id] = new Tree(new pageData(details.url, tab.title,
-        tab.favIconUrl, details.timestamp));
+      histrees[tab.id] = new Tree(null);
+      histree = histrees[tab.id];
+    }
+    if (histree.urls[details.url]) {
+      // it's already in the histree
+      histree.updateNode(details.url, details.timeStamp);
     } else {
-      if (histree.urls[details.url]) {
-        // it's already in the histree
-        histree.updateNode(details.url, details.timeStamp);
+      // add new node to tree
+      if (thumbnails) {
+        chrome.tabs.captureVisibleTab(function (dataUrl) {
+          bkg.console.log("captured: " + dataUrl);
+          histree.addNode(new pageData(details.url, tab.title, tab.favIconUrl, 
+            details.timeStamp, dataUrl));
+        });
       } else {
-//      if (details.transitionQualifiers == "forward_back") {
-//        // should already be in the tree
-//        histree.updateNode(details.url, details.timeStamp)
-//      } else if (details.transitionType == "link" ||
-//        details.transitionType == "typed") {
-        // add new node to tree
         histree.addNode(new pageData(details.url, tab.title, tab.favIconUrl, 
-          details.timeStamp));
+          details.timeStamp, null));
       }
     }
-  });
 }
 
 chrome.webNavigation.onCommitted.addListener(processNav);
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+  if (changeInfo.status == 'complete' && tab.active) {
+    window.addLastNav(tab);
+  }
+});
