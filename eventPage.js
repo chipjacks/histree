@@ -141,9 +141,15 @@ function addNavToTree(details, tab) {
     }
 }
 
+alert("background page loaded");
+
 chrome.webNavigation.onCommitted.addListener(processNav);
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (changeInfo.status == 'complete' && tab.active) {
     window.addLastNav(tab);
   }
+});
+
+chrome.runtime.onSuspend.addListener(function () {
+  bkg.console.log("event page suspended");
 });

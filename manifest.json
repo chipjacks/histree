@@ -8,12 +8,14 @@
   "permissions": [
     "history",
     "webNavigation",
+    "declaritveWebRequest",
     "tabs",
     "<all_urls>"
    ],
 	  
   "background": {
-    "scripts": ["eventPage.js"]
+    "scripts": ["eventPage.js"],
+    "persistent": false
   },
 
   "browser_action": {

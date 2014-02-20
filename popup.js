@@ -1,4 +1,12 @@
  
+// TODO:
+// SVG fix when scrolling
+// favicons
+// website domains
+// website last visit __ ago
+// figure out why event page isn't unloading
+// convert webRequest to declaritiveWebRequest
+
 function displayHistree(eventPage) {
   var visitList = document.getElementById('visit-list');
   chrome.tabs.query({active: true}, function (tabs) {
@@ -58,7 +66,8 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   }
 
   entry.setAttribute("class", "visit-entry");
-  entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
+//  entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
+  entry.style.backgroundImage = "url(icon.png)";
   
   title.className = "title";
 
@@ -82,17 +91,18 @@ function drawBranch(toLi) {
     drawLine(getCoords(parent), getCoords(toLi));
     drawBranch(parent);
   }
+  drawPoint(getCoords(toLi));
 }
 
 function getCoords(li) {
-  return {x: parseInt(li.style.marginLeft) - 5, y: li.offsetTop + 11};
+  return {x: parseInt(li.style.marginLeft) - 3, y: li.offsetTop + 11};
 }
 
 function drawLine(a, b) {
   var svg = document.getElementById('link-svg'); //TODO: make static
   line = '<polyline points="' + a.x + ',' + a.y + ' ' + a.x + ',' + b.y + ' ' +
     a.x + ',' + b.y + ' ' + b.x + ',' + b.y + '" ' +
-    'style="fill: none; stroke: black; stroke-width: 1;"/>';
+    'style="fill: none; stroke: gainsboro; stroke-width: 1;"/>';
   svg.innerHTML += line;
 }
 
