@@ -145,6 +145,7 @@ alert("background page loaded");
 
 chrome.webNavigation.onCommitted.addListener(processNav);
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+  bkg.console.log("tab updated");
   if (changeInfo.status == 'complete' && tab.active) {
     window.addLastNav(tab);
   }

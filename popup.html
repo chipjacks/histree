@@ -26,18 +26,20 @@
         height: 100%;
         overflow-x: hidden;
         overflow-y: scroll;
+        position: relative;
       }
       #link-svg {
         height: 100%;
         width: 100%;
-        overflow: hidden;
         position: absolute;
         z-index: -1;
+        overflow: scroll;
       }
       ol#visit-list {
         list-style-type: none;
         -webkit-padding-start: 0px;
         margin: 0px;
+        position: relative;
       }
       .entry .visit-entry {
         -webkit-padding-start: 20px;
@@ -66,8 +68,32 @@
         color: rgb(48, 57, 66);
         text-decoration: none;
       }
+      #thumbnail-div {
+        width: 175px;
+        height: 180px;
+        margin: 15px auto;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .vert-aligner {
+        display: inline-block;
+        height: 100%;
+        vertical-align: middle;
+      }
       #thumbnail {
-        max-width: 190px;
+        max-width: 173px;
+        max-height: 178px;
+        border-style: solid;
+        border-width: 1px;
+        border-color: #DCDCDC;
+        vertical-align: middle;
+      }
+      #domain {
+        text-align: center;
+      }
+      #last-visit {
+        text-align: center;
+        margin-top: 10px;
       }
       #indent1 {
         padding-left: 40px;
@@ -85,12 +111,17 @@
   <body>
     <div id="inner-div">
       <div id="info-div">
-        <img id="thumbnail">
+        <div id="thumbnail-div">
+          <span class="vert-aligner"></span>
+          <img id="thumbnail"/>
+        </div>
+        <div id="domain"></div>
+        <div id="last-visit"></div>
       </div>
       <div id="link-div">
+        <ol id="visit-list">
         <svg id="link-svg">
         </svg>
-        <ol id="visit-list">
         </ol>
       </div>
     </div>

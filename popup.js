@@ -1,11 +1,16 @@
  
 // TODO:
-// SVG fix when scrolling
+// get it to work with websites like facebook
 // favicons
-// website domains
-// website last visit __ ago
 // figure out why event page isn't unloading
 // convert webRequest to declaritiveWebRequest
+
+// Work around for old browsers that haven't implemented Date().now()
+if (!Date.now) {
+  Date.now = function now() {
+    return new Date().getTime();
+  };
+}
 
 function displayHistree(eventPage) {
   var visitList = document.getElementById('visit-list');
@@ -38,6 +43,39 @@ function displayNode(tabId, list, node, initialIndent, parentId) {
   appendVisitEntry(tabId, list, node.data, initialIndent, myId, parentId);
 }
 
+function lastVisitToString(lv) {
+  var now = new Date();
+  var yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  var secs = (now.getTime() - lv) / 1000;
+  var date = new Date(lv);
+  if (secs < 60) {
+    return "less then a min ago";
+  } else if (secs < 3600) {
+    return Math.round(secs / 60) + " min ago";
+  } else if (secs < 3600 * 12) {
+    var hours = Math.round(secs / 60 / 60);
+    if (hours == 1) {
+      return "about an hour ago";
+    } else {
+      return hours + " hours ago";
+    }
+  } else if (secs < 3600 * 24 && date.getDay() == now.getDay()) {
+    // visit was earlier today
+    var hours = Math.round(secs / 60 / 60);
+    return hours + " hours ago";
+  } else if (yesterday.toDateString() == now.toDateString()) {
+    // visit was yesterday
+    return "yesterday at " + date.toTimeString();
+  } else {
+    var months = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December']
+    // just print date and time of visit
+    return months[date.getMonth()] + " " + date.getDay();
+  }
+}
+
+
 function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   var li = document.createElement('li');
   var entry = document.createElement('div');
@@ -51,6 +89,16 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   li.style.marginLeft = 15 + indentLevel * 20 + "px";
   li.style.paddingLeft = 5 + "px";
   li.style.cursor = "pointer";
+
+  entry.setAttribute("class", "visit-entry");
+  entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
+//  entry.style.backgroundImage = "url(icon.png)";
+  
+  title.className = "title";
+
+  a.href = data.url;
+  a.innerHTML = data.title;
+
   li.onclick = function () {
     chrome.tabs.update(tabId, {url: data.url});
     eventPage.updateNode(data.url, Date.now);
@@ -59,20 +107,21 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
     var thumbnail = document.getElementById("thumbnail");
     thumbnail.src = data.img;
     drawBranch(this);
-//    this.innerHTML = this.offsetTop + ", " + this.offsetLeft;
+    var domainDiv = document.getElementById("domain");
+    var host = a.hostname;
+    if (host) {
+      host = host.replace('www.', '');
+    } else {
+      host = "<br>";
+    }
+    domainDiv.innerHTML = host;
+    var visitDiv = document.getElementById("last-visit");
+    visitDiv.innerHTML = lastVisitToString(data.lastVisit);
   }
   li.onmouseout = function () {
     resetSvg();
   }
 
-  entry.setAttribute("class", "visit-entry");
-//  entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
-  entry.style.backgroundImage = "url(icon.png)";
-  
-  title.className = "title";
-
-  a.href = data.url;
-  a.innerHTML = data.title;
 
   title.appendChild(a);
   entry.appendChild(title);

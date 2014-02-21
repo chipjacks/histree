@@ -8,7 +8,6 @@
   "permissions": [
     "history",
     "webNavigation",
-    "declaritveWebRequest",
     "tabs",
     "<all_urls>"
    ],
