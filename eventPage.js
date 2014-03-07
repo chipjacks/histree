@@ -1,9 +1,12 @@
-
 // Tree and node classes
+// TODO:
+// deal with fast page switches
 
 var bkg = chrome.extension.getBackgroundPage();
 var debug = true;
 var thumbnails = true;
+var lastVisit = {};
+var pendingCaptures = {};
 
 var histrees = {};
 
@@ -23,11 +26,6 @@ function pageData(url, title, favicon, timestamp, img) {
   this.img = img;
 }
 
-pageData.prototype.update = function (timeStamp) {
-  // updates histree node when user revisits it
-  this.lastVisit = timeStamp;
-}
-
 function Node(parent, data) {
   // Adds child node to parent containing data.
   this.data = data;
@@ -36,9 +34,9 @@ function Node(parent, data) {
   if (this.parent) {
     this.parent.children.push(this);
   }
-  if (debug) {
-    bkg.console.log("Node added to tree: " + this);
-  }
+   if (debug) {
+     bkg.console.log("Node added to tree: " + this.data.url);
+   }
 }
 
 function Tree(root_data) {
@@ -65,7 +63,7 @@ Tree.prototype.addNode = function (data) {
   return node;
 }
 
-Tree.prototype.updateNode = function (url, timestamp) {
+Tree.prototype.updateNode = function (url, timestamp, img) {
   // Looks for node with given url. If found, update it's lastVisit and sets it
   // to be currentNode. Otherwise raise exception.
   node = this.urls[url];
@@ -73,9 +71,9 @@ Tree.prototype.updateNode = function (url, timestamp) {
     throw "Tree.updateNode failed: invalid url";
   }
   node.data.lastVisit = timestamp;
+  node.data.img = img;
   this.currentNode = node;
 }
-
 
 Tree.prototype.toString = function () {
   return this.root.toString();
@@ -85,72 +83,90 @@ Node.prototype.toString = function () {
   return this.data.title + "\n" + this.children.join("\n");
 }
 
-function createAddNavClosure(details) {
-  return function(tab) {
-    addNavToTree(details, tab);
-  };
-}
+function addToHistree(tabId, visit) {
+  var lv = visit;
 
-window.addLastNav = function (tab) {};
-
-function processNav(details) {
-  if (debug) {
-    bkg.console.log("Web nav committed!\n" +
-      "tabId = " + details.tabId +
-      "\nurl = " + details.url +
-      "\nprocessId = " + details.processId +
-      "\nframeId = " + details.frameId +
-      "\ntransitionType = " + details.transitionType +
-      "\ntransitionQualifiers = " + details.transitionQualifiers +
-      "\nparentFrameId = " + details.parentFrameId +
-      "\ntimeStamp = " + details.timeStamp
-      );
+  var histree = histrees[tabId];
+  if (!histree) {
+    // initialize the histree
+    histrees[tabId] = new Tree(null);
+    histree = histrees[tabId];
   }
 
-  if (details.transitionQualifiers != "forward_back" &&
-    details.transitionType != "link" && details.transitionType != "typed"
-    && details.transitionType != "generated") {
-    return;
+  if (!(lv.url && lv.title && lv.time && lv.img)) {
+    bkg.console.log("Visit missing data!" + JSON.stringify(lv));
   }
 
-  window.addLastNav = createAddNavClosure(details);
+  if (histree.urls[lv.url]) {
+    histree.updateNode(lv.url, lv.time, lv.img);
+  } else {
+    histree.addNode(new pageData(lv.url, lv.title, 
+      "chrome://favicon/" + lv.url, lv.time, lv.img));
+  }
 }
 
-function addNavToTree(details, tab) {
-    var histree = histrees[tab.id];
-    if (!histree) {
-      // initialize the histree
-      histrees[tab.id] = new Tree(null);
-      histree = histrees[tab.id];
-    }
-    if (histree.urls[details.url]) {
-      // it's already in the histree
-      histree.updateNode(details.url, details.timeStamp);
-    } else {
-      // add new node to tree
-      if (thumbnails) {
-        chrome.tabs.captureVisibleTab(function (dataUrl) {
-          bkg.console.log("captured: " + dataUrl);
-          histree.addNode(new pageData(details.url, tab.title, tab.favIconUrl, 
-            details.timeStamp, dataUrl));
-        });
+function processTabUpdate(tab) {
+  if (lastVisit[tab.id] && lastVisit[tab.id].url == tab.url &&
+    lastVisit[tab.id].historyVisit) {
+    // processHistoryVisit already picked it up, add it to tree
+    var lv = lastVisit[tab.id];
+    lv.title = tab.title;
+
+    pendingCaptures[tab.id] = function () {
+      chrome.tabs.captureVisibleTab(function (dataUrl) {
+        lv.img = dataUrl;
+        addToHistree(tab.id, lv);
+      });
+    };
+  } else {
+    // add some info, let processHistoryVisit add it to tree
+    lastVisit[tab.id] = {url: tab.url, title: tab.title,
+      time: Date.now(), img: null, tabUpdate: true};
+
+    var lv = lastVisit[tab.id];
+
+    pendingCaptures[tab.id] = function () {
+      chrome.tabs.captureVisibleTab(function (dataUrl) {
+        lv.img = dataUrl;
+        if (lv.historyVisit) {
+          addToHistree(tab.id, lv);
+        }
+      });
+    };
+  }
+}
+
+function processHistoryVisit(visit) {
+  chrome.tabs.query({active: true}, function (tabs) {
+    var tab = tabs[0];
+    if (lastVisit[tab.id] && lastVisit[tab.id].url == visit.url &&
+      lastVisit[tab.id].tabUpdate) {
+      // processTabUpdate already picked it up, add it to tree if it already has an img
+      if (lastVisit[tab.id].img) {
+        addToHistree(tab.id, lastVisit[tab.id]);
       } else {
-        histree.addNode(new pageData(details.url, tab.title, tab.favIconUrl, 
-          details.timeStamp, null));
+        lastVisit[tab.id].historyVisit = true;
       }
+    } else {
+      // add some info, let processTabUpdate add it to tree
+      lastVisit[tab.id] = {url: visit.url, title: null,
+        time: Date.now(), img: null, historyVisit: true};
     }
+  });
 }
 
-alert("background page loaded");
-
-chrome.webNavigation.onCommitted.addListener(processNav);
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-  bkg.console.log("tab updated");
-  if (changeInfo.status == 'complete' && tab.active) {
-    window.addLastNav(tab);
-  }
+  bkg.console.log("tab updated: " + changeInfo.status);
+  if (changeInfo.status == 'loading' && tab.active && pendingCaptures[tab.id]) {
+    pendingCaptures[tab.id].call();
+    pendingCaptures[tab.id] = null;
+  } else if (changeInfo.status == 'complete' && tab.active) {
+    // bkg.console.log("tab updated: " + tab.title + "  " + tab.url);
+    processTabUpdate(tab);
+   }
 });
 
-chrome.runtime.onSuspend.addListener(function () {
-  bkg.console.log("event page suspended");
+chrome.history.onVisited.addListener(function (result) {
+  // bkg.console.log("historyitem visited: " + result.title + "  " + result.url);
+  processHistoryVisit(result);
 });

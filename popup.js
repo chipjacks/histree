@@ -2,8 +2,11 @@
 // TODO:
 // get it to work with websites like facebook
 // favicons
-// figure out why event page isn't unloading
+// set up event page and localStorage
 // convert webRequest to declaritiveWebRequest
+
+var green = "#5CD65C";
+var brown = "#AD855C";
 
 // Work around for old browsers that haven't implemented Date().now()
 if (!Date.now) {
@@ -17,6 +20,10 @@ function displayHistree(eventPage) {
   chrome.tabs.query({active: true}, function (tabs) {
     var histree = eventPage.histrees[tabs[0].id];
     displayNode(tabs[0].id, visitList, histree.root, 0, 0);
+    var l = document.getElementsByTagName("li");
+    for (var i = 0; i < l.length; i++) {
+      drawBranch(l[i], brown);
+    }
   });
 }
 
@@ -77,24 +84,35 @@ function lastVisitToString(lv) {
 
 
 function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
+  // DOM structure:
+  // <li class="entry" id="li7" parentid="li2" style="background-image: 
+  //   url(chrome://favicon/;">
+  //   <div class="title">
+  //     <a href="https://chrome.google.com/webstore/">
+  //       Chrome Web Store - Extensions
+  //     </a>
+  //   </div>
+  //   <div class="domain">
+  //     chrome.google.com
+  //   </div>
+  //</li>
   var li = document.createElement('li');
-  var entry = document.createElement('div');
   var title = document.createElement('div');
   var a = document.createElement('a');
+  var domain = document.createElement('div');
   
   li.className = "entry";
   li.setAttribute("id", "li" + myId);
   li.setAttribute("parentId", "li" + parentId);
   li.href = data.url;
-  li.style.marginLeft = 15 + indentLevel * 20 + "px";
-  li.style.paddingLeft = 5 + "px";
+  li.style.marginLeft = 15 + indentLevel * 10 + "px";
   li.style.cursor = "pointer";
 
-  entry.setAttribute("class", "visit-entry");
-  entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
-//  entry.style.backgroundImage = "url(icon.png)";
+  li.style.backgroundImage = "url(" + data.favicon + ")";
+//  entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
   
   title.className = "title";
+  domain.className = "domain";
 
   a.href = data.url;
   a.innerHTML = data.title;
@@ -106,53 +124,79 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   li.onmouseover = function () {
     var thumbnail = document.getElementById("thumbnail");
     thumbnail.src = data.img;
-    drawBranch(this);
-    var domainDiv = document.getElementById("domain");
-    var host = a.hostname;
-    if (host) {
-      host = host.replace('www.', '');
-    } else {
-      host = "<br>";
-    }
-    domainDiv.innerHTML = host;
+    // var domainDiv = document.getElementById("domain");
+//    var host = a.hostname;
+    var host = data.url;
+//     if (host) {
+//       host = host.replace('www.', '');
+//     } else {
+//       host = "<br>";
+//     }
+    domain.innerHTML = host;
     var visitDiv = document.getElementById("last-visit");
     visitDiv.innerHTML = lastVisitToString(data.lastVisit);
+    colorBranch(li, green);
   }
   li.onmouseout = function () {
-    resetSvg();
+    colorBranch(li, brown);
+    domain.innerHTML = "";
   }
 
-
   title.appendChild(a);
-  entry.appendChild(title);
-  li.appendChild(entry);
+  li.appendChild(title);
+  li.appendChild(domain);
   list.appendChild(li);
 }
 
-function resetSvg() {
+function resetSvg(li) {
   var svg = document.getElementById('link-svg'); //TODO: make static
-  svg.innerHTML = "";
-
+  var lines = document.getElementsByTagName('polyline');
+//  drawBranch(li, brown);
+  for (var i = 0; i < lines.length; i++) {
+    lines[i].style.color = brown;
+  }
+  //svg.innerHTML = "";
 }
-function drawBranch(toLi) {
+
+function drawBranch(toLi, color) {
   var parent = document.getElementById(toLi.getAttribute("parentId"));
+  var id = toLi.id;
   if (parent) {
-    drawLine(getCoords(parent), getCoords(toLi));
-    drawBranch(parent);
+    drawLine(getCoords(parent), getCoords(toLi), color, id);
+    drawBranch(parent, color);
   }
   drawPoint(getCoords(toLi));
 }
 
+function colorBranch(toLi, color) {
+  var parent = document.getElementById(toLi.getAttribute("parentId"));
+  var id = toLi.id;
+  if (parent) {
+    colorLine(id, color);
+    colorBranch(parent, color);
+  }
+}
+ 
 function getCoords(li) {
-  return {x: parseInt(li.style.marginLeft) - 3, y: li.offsetTop + 11};
+  return {x: parseInt(li.style.marginLeft) - 8, y: li.offsetTop + 11};
 }
 
-function drawLine(a, b) {
+function drawLine(a, b, color, id) {
   var svg = document.getElementById('link-svg'); //TODO: make static
-  line = '<polyline points="' + a.x + ',' + a.y + ' ' + a.x + ',' + b.y + ' ' +
-    a.x + ',' + b.y + ' ' + b.x + ',' + b.y + '" ' +
-    'style="fill: none; stroke: gainsboro; stroke-width: 1;"/>';
+  line = '<polyline id="sv' + id + 
+    '" points="' + a.x + ',' + a.y + ' ' + a.x + ',' + b.y + ' ' + a.x + ',' + 
+      b.y + ' ' + b.x + ',' + b.y + '" ' +
+    'style="fill: none; stroke: ' + color + '; stroke-width: 3;"/>';
   svg.innerHTML += line;
+}
+
+function colorLine(id, color) {
+  var line = document.getElementById('sv' + id);
+  var parent = line.parentNode;
+  parent.removeChild(line);
+  line.style.stroke = color;
+  line.style.zIndex = 5;
+  parent.appendChild(line);
 }
 
 function deletePoint(a) {
@@ -161,8 +205,8 @@ function deletePoint(a) {
 
 function drawPoint(a) {
   var svg = document.getElementById('link-svg'); //TODO: make static
-  circle = '<circle cx="' + a.x + '" cy="' + a.y + '" r="1" stroke="black"' +
-    'fill="black" />';
+  circle = '<circle cx="' + a.x + '" cy="' + a.y + '" r="4" stroke="' + green +
+    '" fill="' + green + '" />';
   svg.innerHTML += circle;
 //  var circle = document.createElement('circle');
 //  circle.setAttribute('cx', a.x);
