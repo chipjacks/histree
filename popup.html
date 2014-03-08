@@ -5,12 +5,11 @@
     <style>
       body {
         width: 800px;
-        height: 264px;
+        height: 400px;
         font-family: "Segoe UI", Candara, "Bitstream Vera Sans", "DejaVu Sans", "Bitstream Vera Sans", "Trebuchet MS", Verdana, "Verdana Ref", sans-serif;
         //font-family: 'Lucida Grande', sans-serif;
         font-size: 75%;
         margin: 0px;
-        margin-top: -10px;
       }
       #header-div {
         height: 30px;
@@ -21,7 +20,7 @@
         height: 100%;
       }
       #info-div {
-        width: 350px;
+        width: 425px;
         overflow: hidden;
         float: left;
 //        border-right-style: solid;
@@ -80,45 +79,42 @@
         text-decoration: none;
       }
       #thumbnail-div {
-        width: 375px;
-        height: 180px;
-        margin: 0px auto;
+        width: 100%;
+        height: 100%;
         text-align: center;
         white-space: nowrap;
+        overflow:scroll;
       }
       .vert-aligner {
         display: inline-block;
         height: 100%;
-        vertical-align: middle;
+//        vertical-align: middle;
       }
       #thumbnail {
-        max-width: 375px;
-        max-height: 264px;
-        border-style: solid;
-        border-width: 1px;
-        border-color: #DCDCDC;
+//        border-style: solid;
+//        border-width: 1px;
+//        border-color: #DCDCDC;
         vertical-align: middle;
       }
-      #domain {
-        text-align: center;
-      }
-      #last-visit {
-        text-align: center;
-        margin-top: 10px;
+      .lastvisit {
+        float: left;
+        overflow: hidden;
+        line-height: 15px;
+        color: rgb(151, 156, 160);
       }
     </style>
     <script src='popup.js'></script>
   </head>
 
-  <body>
-    <div id="header-div">
+  <body tabindex="1">
+<!--    <div id="header-div">
       <div id="domain"></div>
       <div id="last-visit"></div>
-    </div>
+    </div> -->
     <div id="inner-div">
       <div id="info-div">
         <div id="thumbnail-div">
-          <span class="vert-aligner"></span>
+<!--          <span class="vert-aligner"></span>-->
           <img id="thumbnail"/>
         </div>
       </div>

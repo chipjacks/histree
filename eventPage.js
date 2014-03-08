@@ -110,7 +110,9 @@ function processTabUpdate(tab) {
     lastVisit[tab.id].historyVisit) {
     // processHistoryVisit already picked it up, add it to tree
     var lv = lastVisit[tab.id];
-    lv.title = tab.title;
+    if (!lv.title) {
+      lv.title = tab.title;
+    }
 
     pendingCaptures[tab.id] = function () {
       chrome.tabs.captureVisibleTab(function (dataUrl) {
@@ -149,7 +151,7 @@ function processHistoryVisit(visit) {
       }
     } else {
       // add some info, let processTabUpdate add it to tree
-      lastVisit[tab.id] = {url: visit.url, title: null,
+      lastVisit[tab.id] = {url: visit.url, title: visit.title,
         time: Date.now(), img: null, historyVisit: true};
     }
   });
@@ -159,14 +161,19 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   bkg.console.log("tab updated: " + changeInfo.status);
   if (changeInfo.status == 'loading' && tab.active && pendingCaptures[tab.id]) {
     pendingCaptures[tab.id].call();
-    pendingCaptures[tab.id] = null;
+    pendingCaptures[tab.id] = function () { void(0); };
   } else if (changeInfo.status == 'complete' && tab.active) {
     // bkg.console.log("tab updated: " + tab.title + "  " + tab.url);
     processTabUpdate(tab);
+    // try and capture the tab after a half second
+    setTimeout(function () {
+      pendingCaptures[tab.id].call();
+      pendingCaptures[tab.id] = function () {void(0);};
+    }, 500);
    }
 });
 
 chrome.history.onVisited.addListener(function (result) {
-  // bkg.console.log("historyitem visited: " + result.title + "  " + result.url);
+  bkg.console.log("historyitem visited: " + result.title + "  " + result.url);
   processHistoryVisit(result);
 });

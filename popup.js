@@ -92,6 +92,9 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   //       Chrome Web Store - Extensions
   //     </a>
   //   </div>
+  //   <div class="lastvisit">
+  //     5 min ago
+  //   </div>
   //   <div class="domain">
   //     chrome.google.com
   //   </div>
@@ -99,13 +102,14 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   var li = document.createElement('li');
   var title = document.createElement('div');
   var a = document.createElement('a');
+  var lastvisit = document.createElement('div');
   var domain = document.createElement('div');
   
   li.className = "entry";
   li.setAttribute("id", "li" + myId);
   li.setAttribute("parentId", "li" + parentId);
   li.href = data.url;
-  li.style.marginLeft = 15 + indentLevel * 10 + "px";
+  li.style.marginLeft = 25 + indentLevel * 10 + "px";
   li.style.cursor = "pointer";
 
   li.style.backgroundImage = "url(" + data.favicon + ")";
@@ -113,6 +117,7 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   
   title.className = "title";
   domain.className = "domain";
+  lastvisit.className = "lastvisit";
 
   a.href = data.url;
   a.innerHTML = data.title;
@@ -122,8 +127,23 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
     eventPage.updateNode(data.url, Date.now);
   }
   li.onmouseover = function () {
-    var thumbnail = document.getElementById("thumbnail");
-    thumbnail.src = data.img;
+    var tb = document.getElementById("thumbnail");
+    tb.removeAttribute("height");
+    tb.removeAttribute("width");
+    var div = document.getElementById("thumbnail-div");
+    tb.src = data.img;
+    tb_ratio = tb.width / tb.height;
+    if ((tb.width / tb.height) > (div.clientWidth / div.clientHeight)) {
+      // it's too fat
+      tb.width = div.clientWidth - 2;
+      tb.height = tb.width / tb_ratio;
+      // tb.marginTop = (tb.height - div.clientHeight) / 2;
+      // tb.style.marginLeft = 0 - (tb.width - div.clientWidth) / 2 + "px";
+    } else {
+      // it's too tall
+      tb.width = div.clientWidth - 2;
+      tb.height = tb.width / tb_ratio;
+    }
     // var domainDiv = document.getElementById("domain");
 //    var host = a.hostname;
     var host = data.url;
@@ -133,17 +153,21 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
 //       host = "<br>";
 //     }
     domain.innerHTML = host;
-    var visitDiv = document.getElementById("last-visit");
-    visitDiv.innerHTML = lastVisitToString(data.lastVisit);
+
+    lastvisit.innerHTML = lastVisitToString(data.lastVisit);
+//     var visitDiv = document.getElementById("last-visit");
+//     visitDiv.innerHTML = lastVisitToString(data.lastVisit);
     colorBranch(li, green);
   }
   li.onmouseout = function () {
     colorBranch(li, brown);
     domain.innerHTML = "";
+    lastvisit.innerHTML = "";
   }
 
   title.appendChild(a);
   li.appendChild(title);
+  li.appendChild(lastvisit);
   li.appendChild(domain);
   list.appendChild(li);
 }
@@ -151,11 +175,9 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
 function resetSvg(li) {
   var svg = document.getElementById('link-svg'); //TODO: make static
   var lines = document.getElementsByTagName('polyline');
-//  drawBranch(li, brown);
   for (var i = 0; i < lines.length; i++) {
     lines[i].style.color = brown;
   }
-  //svg.innerHTML = "";
 }
 
 function drawBranch(toLi, color) {
@@ -165,7 +187,7 @@ function drawBranch(toLi, color) {
     drawLine(getCoords(parent), getCoords(toLi), color, id);
     drawBranch(parent, color);
   }
-  drawPoint(getCoords(toLi));
+  drawPoint(getCoords(toLi), id);
 }
 
 function colorBranch(toLi, color) {
@@ -175,6 +197,7 @@ function colorBranch(toLi, color) {
     colorLine(id, color);
     colorBranch(parent, color);
   }
+  colorPoint(toLi, green);
 }
  
 function getCoords(li) {
@@ -183,19 +206,18 @@ function getCoords(li) {
 
 function drawLine(a, b, color, id) {
   var svg = document.getElementById('link-svg'); //TODO: make static
-  line = '<polyline id="sv' + id + 
-    '" points="' + a.x + ',' + a.y + ' ' + a.x + ',' + b.y + ' ' + a.x + ',' + 
-      b.y + ' ' + b.x + ',' + b.y + '" ' +
+  line = '<polyline id="' + id + 
+    'line" points="' + a.x + ',' + a.y + ' ' + a.x + ',' + (b.y + 12) + 
+      ' ' + a.x + ',' + (b.y + 12) + ' ' + b.x + ',' + b.y + '" ' +
     'style="fill: none; stroke: ' + color + '; stroke-width: 3;"/>';
   svg.innerHTML += line;
 }
 
 function colorLine(id, color) {
-  var line = document.getElementById('sv' + id);
+  var line = document.getElementById(id + 'line');
   var parent = line.parentNode;
   parent.removeChild(line);
   line.style.stroke = color;
-  line.style.zIndex = 5;
   parent.appendChild(line);
 }
 
@@ -203,19 +225,22 @@ function deletePoint(a) {
   var pt = document.getElementById("circle" + a.x + "-" + a.y);
 }
 
-function drawPoint(a) {
+function drawPoint(a, id) {
   var svg = document.getElementById('link-svg'); //TODO: make static
-  circle = '<circle cx="' + a.x + '" cy="' + a.y + '" r="4" stroke="' + green +
-    '" fill="' + green + '" />';
+  circle = '<circle id="' + id + 'point" cx="' + a.x + '" cy="' + a.y +
+    '" r="4" stroke="' + green + '" fill="' + green + '" />';
   svg.innerHTML += circle;
-//  var circle = document.createElement('circle');
-//  circle.setAttribute('cx', a.x);
-//  circle.setAttribute('cy', a.y);
-//  circle.setAttribute('r', 5);
-//  circle.setAttribute('stroke', 'black');
-//  circle.setAttribute('fill', 'black');
-//  svg.appendChild(circle);
 }
+
+function colorPoint(li, color) {
+  var point = document.getElementById(li.id + "point");
+  var parent = point.parentNode;
+  parent.removeChild(point);
+  point.style.stroke = color;
+  point.style.fill = color;
+  parent.appendChild(point);
+}
+
 
 document.addEventListener('DOMContentLoaded', function () {
   chrome.runtime.getBackgroundPage(displayHistree);
