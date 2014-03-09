@@ -17,14 +17,20 @@ if (!Date.now) {
 
 function displayHistree(eventPage) {
   var visitList = document.getElementById('visit-list');
-  chrome.tabs.query({active: true}, function (tabs) {
+  chrome.tabs.query({active: true, windowId: chrome.windows.WINDOW_ID_CURRENT}, function (tabs) {
+    if (tabs.length != 1) { alert("Ambiguous tab query: " + tabs.length); }
     var histree = eventPage.histrees[tabs[0].id];
     displayNode(tabs[0].id, visitList, histree.root, 0, 0);
-    var l = document.getElementsByTagName("li");
-    for (var i = 0; i < l.length; i++) {
-      drawBranch(l[i], brown);
-    }
+    setTimeout(drawTree, 20);
   });
+}
+
+function drawTree() {
+  var list = document.getElementById('visit-list');
+  var entries = list.children;
+  for (var i = 1; i < entries.length; i++) {
+    drawBranch(entries[i], brown);
+  }
 }
 
 function nextId() {
@@ -113,7 +119,6 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   li.style.cursor = "pointer";
 
   li.style.backgroundImage = "url(" + data.favicon + ")";
-//  entry.style.backgroundImage = "url(http://g.etfv.co/" + data.url + ")";
   
   title.className = "title";
   domain.className = "domain";
@@ -133,30 +138,18 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
     var div = document.getElementById("thumbnail-div");
     tb.src = data.img;
     tb_ratio = tb.width / tb.height;
-    if ((tb.width / tb.height) > (div.clientWidth / div.clientHeight)) {
-      // it's too fat
-      tb.width = div.clientWidth - 2;
-      tb.height = tb.width / tb_ratio;
-      // tb.marginTop = (tb.height - div.clientHeight) / 2;
-      // tb.style.marginLeft = 0 - (tb.width - div.clientWidth) / 2 + "px";
-    } else {
-      // it's too tall
-      tb.width = div.clientWidth - 2;
-      tb.height = tb.width / tb_ratio;
-    }
-    // var domainDiv = document.getElementById("domain");
+    tb.width = div.clientWidth - 2;
+    tb.height = tb.width / tb_ratio;
 //    var host = a.hostname;
-    var host = data.url;
 //     if (host) {
 //       host = host.replace('www.', '');
 //     } else {
 //       host = "<br>";
 //     }
+    var host = data.url;
     domain.innerHTML = host;
 
     lastvisit.innerHTML = lastVisitToString(data.lastVisit);
-//     var visitDiv = document.getElementById("last-visit");
-//     visitDiv.innerHTML = lastVisitToString(data.lastVisit);
     colorBranch(li, green);
   }
   li.onmouseout = function () {

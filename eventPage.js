@@ -139,7 +139,8 @@ function processTabUpdate(tab) {
 }
 
 function processHistoryVisit(visit) {
-  chrome.tabs.query({active: true}, function (tabs) {
+  chrome.tabs.query({active: true, windowId: chrome.windows.WINDOW_ID_CURRENT}, function (tabs) {
+    if (tabs.length != 1) { alert("ambiguous tabs query: " + tabs.length); }
     var tab = tabs[0];
     if (lastVisit[tab.id] && lastVisit[tab.id].url == visit.url &&
       lastVisit[tab.id].tabUpdate) {
