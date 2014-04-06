@@ -1,22 +1,12 @@
-// Tree and node classes
-// TODO:
-// deal with fast page switches
+// Histree Google Chrome Extension
+// Javascript functions for tracking page visits and building histree
+// Chip Jackson, March 2014
 
-var bkg = chrome.extension.getBackgroundPage();
-var debug = true;
-var thumbnails = true;
 var lastVisit = {};
 var pendingCaptures = {};
-
 var histrees = {};
 
-// Work around for old browsers that haven't implemented Date().now()
-if (!Date.now) {
-  Date.now = function now() {
-    return new Date().getTime();
-  };
-}
-
+// pageData Class
 function pageData(url, title, favicon, timestamp, img) {
   // class to store data for histree nodes
   this.lastVisit = timestamp;
@@ -26,6 +16,7 @@ function pageData(url, title, favicon, timestamp, img) {
   this.img = img;
 }
 
+// Node Class
 function Node(parent, data) {
   // Adds child node to parent containing data.
   this.data = data;
@@ -34,11 +25,13 @@ function Node(parent, data) {
   if (this.parent) {
     this.parent.children.push(this);
   }
-   if (debug) {
-     bkg.console.log("Node added to tree: " + this.data.url);
-   }
 }
 
+Node.prototype.toString = function () {
+  return this.data.title + "\n" + this.children.join("\n");
+}
+
+// Tree Class
 function Tree(root_data) {
   // Creates a tree with root node containing root_data.
   // The tree keeps track of a currentNode, our current location on the tree.
@@ -63,7 +56,7 @@ Tree.prototype.addNode = function (data) {
   return node;
 }
 
-Tree.prototype.updateNode = function (url, timestamp, img) {
+Tree.prototype.updateNode = function (url, timestamp) {
   // Looks for node with given url. If found, update it's lastVisit and sets it
   // to be currentNode. Otherwise raise exception.
   node = this.urls[url];
@@ -71,7 +64,6 @@ Tree.prototype.updateNode = function (url, timestamp, img) {
     throw "Tree.updateNode failed: invalid url";
   }
   node.data.lastVisit = timestamp;
-  node.data.img = img;
   this.currentNode = node;
 }
 
@@ -79,9 +71,6 @@ Tree.prototype.toString = function () {
   return this.root.toString();
 }
   
-Node.prototype.toString = function () {
-  return this.data.title + "\n" + this.children.join("\n");
-}
 
 function addToHistree(tabId, visit) {
   var lv = visit;
@@ -93,10 +82,6 @@ function addToHistree(tabId, visit) {
     histree = histrees[tabId];
   }
 
-  if (!(lv.url && lv.title && lv.time && lv.img)) {
-    bkg.console.log("Visit missing data!" + JSON.stringify(lv));
-  }
-
   if (histree.urls[lv.url]) {
     histree.updateNode(lv.url, lv.time, lv.img);
   } else {
@@ -106,14 +91,25 @@ function addToHistree(tabId, visit) {
 }
 
 function processTabUpdate(tab) {
+  var lv;
   if (lastVisit[tab.id] && lastVisit[tab.id].url == tab.url &&
     lastVisit[tab.id].historyVisit) {
     // processHistoryVisit already picked it up, add it to tree
-    var lv = lastVisit[tab.id];
+    lv = lastVisit[tab.id];
     if (!lv.title) {
       lv.title = tab.title;
     }
-
+    pendingCaptures[tab.id] = function () {
+      chrome.tabs.captureVisibleTab(function (dataUrl) {
+        lv.img = dataUrl;
+        addToHistree(tab.id, lv);
+      });
+    };
+  } else if (!histrees[tab.id]) {
+    // this is a new tab
+    lv = {url: tab.url, title: tab.title, time: Date.now(), img: null,
+      tabUpdate: true};
+    lastVisit[tab.id] = lv;
     pendingCaptures[tab.id] = function () {
       chrome.tabs.captureVisibleTab(function (dataUrl) {
         lv.img = dataUrl;
@@ -124,9 +120,7 @@ function processTabUpdate(tab) {
     // add some info, let processHistoryVisit add it to tree
     lastVisit[tab.id] = {url: tab.url, title: tab.title,
       time: Date.now(), img: null, tabUpdate: true};
-
-    var lv = lastVisit[tab.id];
-
+    lv = lastVisit[tab.id];
     pendingCaptures[tab.id] = function () {
       chrome.tabs.captureVisibleTab(function (dataUrl) {
         lv.img = dataUrl;
@@ -139,34 +133,42 @@ function processTabUpdate(tab) {
 }
 
 function processHistoryVisit(visit) {
-  chrome.tabs.query({active: true, windowId: chrome.windows.WINDOW_ID_CURRENT}, function (tabs) {
-    if (tabs.length != 1) { alert("ambiguous tabs query: " + tabs.length); }
-    var tab = tabs[0];
-    if (lastVisit[tab.id] && lastVisit[tab.id].url == visit.url &&
-      lastVisit[tab.id].tabUpdate) {
-      // processTabUpdate already picked it up, add it to tree if it already has an img
-      if (lastVisit[tab.id].img) {
-        addToHistree(tab.id, lastVisit[tab.id]);
+  chrome.tabs.query({active: true, windowId: chrome.windows.WINDOW_ID_CURRENT},
+    function (tabs) {
+      var tab = tabs[0];
+      if (lastVisit[tab.id] && lastVisit[tab.id].url == visit.url &&
+        lastVisit[tab.id].tabUpdate) {
+        // processTabUpdate already picked it up, add it to tree if it already
+        // has an img
+        if (lastVisit[tab.id].img) {
+          addToHistree(tab.id, lastVisit[tab.id]);
+        } else {
+          lastVisit[tab.id].historyVisit = true;
+        }
       } else {
-        lastVisit[tab.id].historyVisit = true;
+        // add some info, let processTabUpdate add it to tree
+        lastVisit[tab.id] = {url: visit.url, title: visit.title,
+          time: Date.now(), img: null, historyVisit: true};
       }
-    } else {
-      // add some info, let processTabUpdate add it to tree
-      lastVisit[tab.id] = {url: visit.url, title: visit.title,
-        time: Date.now(), img: null, historyVisit: true};
     }
-  });
+  );
+}
+
+// Work around for old browsers that haven't implemented Date().now()
+if (!Date.now) {
+  Date.now = function now() {
+    return new Date().getTime();
+  };
 }
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-  bkg.console.log("tab updated: " + changeInfo.status);
   if (changeInfo.status == 'loading' && tab.active && pendingCaptures[tab.id]) {
+    // tab is changing pages, try and capture last page if we haven't already
     pendingCaptures[tab.id].call();
     pendingCaptures[tab.id] = function () { void(0); };
   } else if (changeInfo.status == 'complete' && tab.active) {
-    // bkg.console.log("tab updated: " + tab.title + "  " + tab.url);
     processTabUpdate(tab);
-    // try and capture the tab after a half second
+    // try and capture tab after a half second to let javascript finish executing
     setTimeout(function () {
       pendingCaptures[tab.id].call();
       pendingCaptures[tab.id] = function () {void(0);};
@@ -175,6 +177,5 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
 });
 
 chrome.history.onVisited.addListener(function (result) {
-  bkg.console.log("historyitem visited: " + result.title + "  " + result.url);
   processHistoryVisit(result);
 });

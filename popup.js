@@ -1,36 +1,20 @@
- 
-// TODO:
-// get it to work with websites like facebook
-// favicons
-// set up event page and localStorage
-// convert webRequest to declaritiveWebRequest
+// Histree Google Chrome Extension
+// Javascript functions for displaying histree in popup window
+// Chip Jackson, March 2014
+
 
 var green = "#5CD65C";
 var brown = "#AD855C";
 
-// Work around for old browsers that haven't implemented Date().now()
-if (!Date.now) {
-  Date.now = function now() {
-    return new Date().getTime();
-  };
-}
-
+// Called on popup load to parse and recursively display nodes of histree
 function displayHistree(eventPage) {
   var visitList = document.getElementById('visit-list');
-  chrome.tabs.query({active: true, windowId: chrome.windows.WINDOW_ID_CURRENT}, function (tabs) {
-    if (tabs.length != 1) { alert("Ambiguous tab query: " + tabs.length); }
+  chrome.tabs.query({active: true, windowId: chrome.windows.WINDOW_ID_CURRENT},
+    function (tabs) {
     var histree = eventPage.histrees[tabs[0].id];
     displayNode(tabs[0].id, visitList, histree.root, 0, 0);
     setTimeout(drawTree, 20);
   });
-}
-
-function drawTree() {
-  var list = document.getElementById('visit-list');
-  var entries = list.children;
-  for (var i = 1; i < entries.length; i++) {
-    drawBranch(entries[i], brown);
-  }
 }
 
 function nextId() {
@@ -53,44 +37,11 @@ function displayNode(tabId, list, node, initialIndent, parentId) {
     }
   } 
   // then display the node
-  appendVisitEntry(tabId, list, node.data, initialIndent, myId, parentId);
+  appendListEntry(tabId, list, node.data, initialIndent, myId, parentId);
 }
 
-function lastVisitToString(lv) {
-  var now = new Date();
-  var yesterday = new Date();
-  yesterday.setDate(now.getDate() - 1);
-  var secs = (now.getTime() - lv) / 1000;
-  var date = new Date(lv);
-  if (secs < 60) {
-    return "less then a min ago";
-  } else if (secs < 3600) {
-    return Math.round(secs / 60) + " min ago";
-  } else if (secs < 3600 * 12) {
-    var hours = Math.round(secs / 60 / 60);
-    if (hours == 1) {
-      return "about an hour ago";
-    } else {
-      return hours + " hours ago";
-    }
-  } else if (secs < 3600 * 24 && date.getDay() == now.getDay()) {
-    // visit was earlier today
-    var hours = Math.round(secs / 60 / 60);
-    return hours + " hours ago";
-  } else if (yesterday.toDateString() == now.toDateString()) {
-    // visit was yesterday
-    return "yesterday at " + date.toTimeString();
-  } else {
-    var months = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December']
-    // just print date and time of visit
-    return months[date.getMonth()] + " " + date.getDay();
-  }
-}
-
-
-function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
-  // DOM structure:
+function appendListEntry(tabId, list, data, indentLevel, myId, parentId) {
+  // HTML DOM structure:
   // <li class="entry" id="li7" parentid="li2" style="background-image: 
   //   url(chrome://favicon/;">
   //   <div class="title">
@@ -127,6 +78,7 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   a.href = data.url;
   a.innerHTML = data.title;
 
+  // Setup event callbacks
   li.onclick = function () {
     chrome.tabs.update(tabId, {url: data.url});
     eventPage.updateNode(data.url, Date.now);
@@ -140,12 +92,6 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
     tb_ratio = tb.width / tb.height;
     tb.width = div.clientWidth - 2;
     tb.height = tb.width / tb_ratio;
-//    var host = a.hostname;
-//     if (host) {
-//       host = host.replace('www.', '');
-//     } else {
-//       host = "<br>";
-//     }
     var host = data.url;
     domain.innerHTML = host;
 
@@ -165,11 +111,45 @@ function appendVisitEntry(tabId, list, data, indentLevel, myId, parentId) {
   list.appendChild(li);
 }
 
-function resetSvg(li) {
-  var svg = document.getElementById('link-svg'); //TODO: make static
-  var lines = document.getElementsByTagName('polyline');
-  for (var i = 0; i < lines.length; i++) {
-    lines[i].style.color = brown;
+function lastVisitToString(lv) {
+  var now = new Date();
+  var yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  var secs = (now.getTime() - lv) / 1000;
+  var date = new Date(lv);
+  if (secs < 60) {
+    return "less then a min ago";
+  } else if (secs < 3600) {
+    return Math.round(secs / 60) + " min ago";
+  } else if (secs < 3600 * 12) {
+    var hours = Math.round(secs / 60 / 60);
+    if (hours == 1) {
+      return "about an hour ago";
+    } else {
+      return hours + " hours ago";
+    }
+  } else if (secs < 3600 * 24 && date.getDay() == now.getDay()) {
+    // visit was earlier today
+    var hours = Math.round(secs / 60 / 60);
+    return hours + " hours ago";
+  } else if (yesterday.toDateString() == now.toDateString()) {
+    // visit was yesterday
+    return "yesterday at " + date.toTimeString();
+  } else {
+    var months = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December']
+    // just print date and time of visit
+    return months[date.getMonth()] + " " + date.getDay();
+  }
+}
+
+
+// Functions for drawing the SVG lines and points linking histree nodes
+function drawTree() {
+  var list = document.getElementById('visit-list');
+  var entries = list.children;
+  for (var i = 1; i < entries.length; i++) {
+    drawBranch(entries[i], brown);
   }
 }
 
@@ -193,10 +173,6 @@ function colorBranch(toLi, color) {
   colorPoint(toLi, green);
 }
  
-function getCoords(li) {
-  return {x: parseInt(li.style.marginLeft) - 8, y: li.offsetTop + 11};
-}
-
 function drawLine(a, b, color, id) {
   var svg = document.getElementById('link-svg'); //TODO: make static
   line = '<polyline id="' + id + 
@@ -214,10 +190,6 @@ function colorLine(id, color) {
   parent.appendChild(line);
 }
 
-function deletePoint(a) {
-  var pt = document.getElementById("circle" + a.x + "-" + a.y);
-}
-
 function drawPoint(a, id) {
   var svg = document.getElementById('link-svg'); //TODO: make static
   circle = '<circle id="' + id + 'point" cx="' + a.x + '" cy="' + a.y +
@@ -232,6 +204,18 @@ function colorPoint(li, color) {
   point.style.stroke = color;
   point.style.fill = color;
   parent.appendChild(point);
+}
+
+function getCoords(li) {
+  return {x: parseInt(li.style.marginLeft) - 8, y: li.offsetTop + 11};
+}
+
+
+// Work around for old browsers that haven't implemented Date().now()
+if (!Date.now) {
+  Date.now = function now() {
+    return new Date().getTime();
+  };
 }
 
 
