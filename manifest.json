@@ -1,24 +1,24 @@
 {
-  "manifest_version": 2,
+	"manifest_version": 2,
 
-  "name": "Histree",
-  "description": "View and navigate all the branches of your histree.",
-  "version": "1.0",
+	"name": "Histree",
+	"description": "View and navigate all the branches of your histree.",
+	"version": "1.0",
 
-  "permissions": [
-    "history",
-    "webNavigation",
-    "tabs",
-    "<all_urls>"
-   ],
-	  
-  "background": {
-    "scripts": ["eventPage.js"],
-    "persistent": true
-  },
+	"permissions": [
+		"history",
+	"webNavigation",
+	"tabs",
+	"<all_urls>"
+		],
 
-  "browser_action": {
-    "default_icon": "histree.png",
-    "default_popup": "popup.html"
-  }
+	"background": {
+		"scripts": ["eventPage.js"],
+		"persistent": true
+	},
+
+	"browser_action": {
+		"default_icon": "histree.png",
+		"default_popup": "popup.html"
+	}
 }
