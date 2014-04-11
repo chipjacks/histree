@@ -5,3 +5,6 @@
 graphics
 packed_versions
 mockups
+*.xlsx
+test.html
+v1

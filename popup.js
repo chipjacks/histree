@@ -63,7 +63,7 @@ function appendListEntry(tabId, list, data, indentLevel, myId, parentId) {
 	var lastvisit = document.createElement('div');
 	var domain = document.createElement('div');
 
-	li.className = "entry";
+	li.className = "entry " + "tab" + tabId;
 	li.setAttribute("id", "li" + myId);
 	li.setAttribute("parentId", "li" + parentId);
 	li.href = data.url;
@@ -159,7 +159,6 @@ function drawBranch(toLi, color) {
 	var id = toLi.id;
 	if (parent) {
 		drawLine(getCoords(parent), getCoords(toLi), color, id);
-		drawBranch(parent, color);
 	}
 	drawPoint(getCoords(toLi), id);
 }

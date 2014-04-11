@@ -138,18 +138,18 @@ function processHistoryVisit(visit) {
 				var tab = tabs[0];
 				if (lastVisit[tab.id] && lastVisit[tab.id].url == visit.url &&
 					lastVisit[tab.id].tabUpdate) {
-						// processTabUpdate already picked it up, add it to tree if it already
-						// has an img
-						if (lastVisit[tab.id].img) {
-							addToHistree(tab.id, lastVisit[tab.id]);
-						} else {
-							lastVisit[tab.id].historyVisit = true;
-						}
+					// processTabUpdate already picked it up, add it to tree if it already
+					// has an img
+					if (lastVisit[tab.id].img) {
+						addToHistree(tab.id, lastVisit[tab.id]);
 					} else {
-						// add some info, let processTabUpdate add it to tree
-						lastVisit[tab.id] = {url: visit.url, title: visit.title,
-							time: Date.now(), img: null, historyVisit: true};
+						lastVisit[tab.id].historyVisit = true;
 					}
+				} else {
+					// add some info, let processTabUpdate add it to tree
+					lastVisit[tab.id] = {url: visit.url, title: visit.title,
+						time: Date.now(), img: null, historyVisit: true};
+				}
 			}
 			);
 }
