@@ -3,17 +3,16 @@
 
 	"name": "Histree",
 	"description": "View and navigate all the branches of your histree.",
-	"version": "1.0",
+	"version": "2.0",
 
 	"permissions": [
 		"history",
-	"webNavigation",
-	"tabs",
-	"<all_urls>"
-		],
+		"tabs",
+		"chrome://favicon/"
+	],
 
 	"background": {
-		"scripts": ["eventPage.js"],
+		"scripts": ["background.js"],
 		"persistent": true
 	},
 

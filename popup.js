@@ -1,20 +1,27 @@
 // Histree Google Chrome Extension
-// Javascript functions for displaying histree in popup window
+// Javascript functions for parsing histree data structure and displaying in
+// popup window.
 // Chip Jackson, March 2014
 
-
+//------------------------------------------------------------------------------
+// GLOBALS
 var green = "#5CD65C";
 var brown = "#AD855C";
 
 // Called on popup load to parse and recursively display nodes of histree
-function displayHistree(eventPage) {
+function displayHistree(backgroundPage) {
 	var visitList = document.getElementById('visit-list');
-	chrome.tabs.query({active: true, windowId: chrome.windows.WINDOW_ID_CURRENT},
-			function (tabs) {
-				var histree = eventPage.histrees[tabs[0].id];
-				displayNode(tabs[0].id, visitList, histree.root, 0, 0);
-				setTimeout(drawTree, 20);
-			});
+	chrome.tabs.query({active: true, currentWindow: true},
+		function (tabs) {
+			if (tabs.length > 1) {
+				console.error(
+					"chrome.tabs.query returned more than 1 active tab.");
+			}
+			var tab = tabs[0];
+			var histree = eventPage.histrees[tab.id];
+			displayNode(tabs[0].id, visitList, histree.root, 0, 0);
+			setTimeout(drawTree, 20);
+		});
 }
 
 function nextId() {
