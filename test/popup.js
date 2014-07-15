@@ -81,10 +81,9 @@ HistreeDisplay.prototype.getIndent = function () {
 function displayHistree(histree) {
 	var hd = new HistreeDisplay(histree.currentNode);
 	var node = null;
-	node = hd.next;
-// 	while (node = hd.next) {
+	while (node = hd.next) {
 		displayNode(node, hd.curIndent);
-// 	}
+	}
 }
 // 	chrome.tabs.query({active: true, currentWindow: true},
 // 		function (tabs) {
@@ -97,7 +96,7 @@ function displayHistree(histree) {
 // 			displayNode(tabs[0].id, visitList, histree.root, 0, 0);
 // 			setTimeout(drawTree, 20);
 // 		});
-//}
+}
 
 function displayNode(node, indent) {
 	var visitList = document.getElementById('visit-list');
@@ -108,21 +107,21 @@ function displayNode(node, indent) {
 	var lastvisit = document.createElement('div');
 	var domain = document.createElement('div');
 
-	li.className = "entry";
+	li.className = "entry " + "tab" + tabId;
 // 	li.setAttribute("id", "li" + myId);
 // 	li.setAttribute("parentId", "li" + parentId);
 	li.href = node.url;
 	li.style.marginLeft = 25 + indent * 20 + "px";
 	li.style.cursor = "pointer";
 
-	li.style.backgroundImage = "url(chrome://favicon/" + node.url + ")";
+	li.style.backgroundImage = "url(chrome://favicon/" + data.url + ")";
 
 	title.className = "title";
 	domain.className = "domain";
 	lastvisit.className = "lastvisit";
 
-	a.href = node.url;
-	a.innerHTML = node.title;
+	a.href = data.url;
+	a.innerHTML = data.title;
 
 // 	// Setup event callbacks
 // 	li.onclick = function () {
@@ -359,32 +358,7 @@ if (!Date.now) {
 	};
 }
 
-function test(condition, message) {
-	if (!condition) {
-		console.error(message);
-		return false;
-	}
-	return true;
-}
 
-document.addEventListener('DOMContentLoaded',
-	function () {
-		chrome.runtime.getBackgroundPage(
-			function (bgPage) {
-				chrome.tabs.query({active: true, currentWindow: true},
-					function (tabs) {
-						if (tabs.length > 1) {
-							console.error(
-								"chrome.tabs.query returned more than 1 active tab.");
-						}
-						var tab = tabs[0];
-						var histree = bgPage.histrees[tab.id];
-						if (!histree) {
-							console.error("No histree found for tab %d", tab.id);
-							return;
-						}
-						displayHistree(histree);
-					});
-			});
-	});
-
+document.addEventListener('DOMContentLoaded', function () {
+	chrome.runtime.getBackgroundPage(displayHistree);
+});

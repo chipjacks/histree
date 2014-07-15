@@ -14,10 +14,9 @@ var histrees = {};	// inidividual tab histrees, keyed by tabId
 var lastVisit = {};	// stores last visited page for each tab
 var THUMBNAILS = false;
 
-function init() {
-// Called when extension is installed or upgraded
+function buildTestTree() {
+
 }
-chrome.runtime.onInstalled.addListener(init);
 
 //------------------------------------------------------------------------------
 // Tree class methods
@@ -29,7 +28,7 @@ function Tree() {
 
 Tree.prototype.addNode = function (node) {
 // appends node as child of Tree.currentNode, points Tree.currentNode to node.
-	console.info("Tree.prototype.addNode called with: ", node);
+	console.info("Tree.prototype.addNode called with: %o", node);
 
 	// see if the url is already in the tree
 	var oldNode = this.urls[node.url];
@@ -72,14 +71,16 @@ Tree.prototype.addNode = function (node) {
 
 //------------------------------------------------------------------------------
 // Node class methods
-function Node(initObj) {
-	for (var fld in initObj) {
-		this[fld] = initObj[fld];
-	}
+function Node() {
+	this.url = undefined;
+	this.title = undefined;
+	this.time = undefined;
+	this.id = undefined;
 	this.children = [];
+	this.tabId = undefined;
 }
 
-Node.prototype.isValid = function() {
+Node.prototype.isValid() {
 // checks that node object contains all required data fields
 	return (
 		this.url &&
@@ -91,8 +92,8 @@ Node.prototype.isValid = function() {
 	);
 }
 
-Node.prototype.isYoungestChild = function() {
-	if (!this.parent) {
+Node.prototype.isYoungestChild() {
+	if (!node.parent) {
 		return true;
 	} else {
 		var siblings = this.parent.children;
@@ -100,8 +101,8 @@ Node.prototype.isYoungestChild = function() {
 	}
 }
 
-Node.prototype.isOldestChild = function() {
-	if (!this.parent) {
+Node.prototype.isOldestChild() {
+	if (!node.parent) {
 		return true;
 	} else {
 		var siblings = this.parent.children;
@@ -109,7 +110,7 @@ Node.prototype.isOldestChild = function() {
 	}
 }
 
-Node.prototype.bigBro = function() {
+Node.prototype.bigBro() {
 	if (this.isOldestChild()) {
 		return null;
 	} else {
@@ -119,7 +120,7 @@ Node.prototype.bigBro = function() {
 	}
 }
 
-Node.prototype.lilBro = function() {
+Node.prototype.lilBro() {
 	if (this.isYoungestChild()) {
 		return null;
 	} else {
@@ -169,8 +170,8 @@ function onHistoryItemVisited(histItem) {
 				}
 			} else {
 				// add some info, let onTabUpdated add it to the tree
-				lastVisit[tab.id] = new Node({url: histItem.url, title: histItem.title,
-					time: Date.now(), tabId: tab.id, historyVisit: true});
+				lastVisit[tab.id] = {url: histItem.url, title: histItem.title,
+					time: Date.now(), tabId: tab.id, historyVisit: true};
 			}
 		});
 }
@@ -215,8 +216,8 @@ function onTabUpdated(tabId, changeInfo, tab) {
 			}
 		} else {
 			// add some info, let onHistoryItemVisit add it to tree
-			lastVisit[tab.id] = new Node({url: tab.url, title: tab.title,
-				time: Date.now(), tabId: tab.id, tabUpdate: true});
+			lastVisit[tab.id] = {url: tab.url, title: tab.title,
+				time: Date.now(), tabId: tab.id, tabUpdate: true};
 			lv = lastVisit[tab.id];
 			if (THUMBNAILS) {
 				pendingCaptures[tab.id] = function () {
@@ -237,6 +238,7 @@ chrome.tabs.onUpdated.addListener(onTabUpdated);
 // Callbacks for tab creation and removal
 function onTabCreated(tab) {
 	console.info("Tab created: ", tab);
+
 	histrees[tab.id] = new Tree();
 }
 chrome.tabs.onCreated.addListener(onTabCreated);
