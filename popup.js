@@ -1,7 +1,7 @@
 // Histree Google Chrome Extension
 // Javascript functions for parsing histree data structure and displaying in
 // popup window.
-// Chip Jackson, March 2014
+// Chip Jackson, July 2014
 
 //------------------------------------------------------------------------------
 // GLOBALS
@@ -30,6 +30,9 @@ HistreeDisplay.prototype.next = function () {
 	var next = null;
 	if (this.curNode.isOldestChild()) {
 		next = this.curNode.parent;
+		if (!next) {
+			return null;
+		}
 		if (next.children.length > 1) {
 			this.curIndent -= 1;
 		}
@@ -80,11 +83,22 @@ HistreeDisplay.prototype.getIndent = function () {
 // Called on popup load to parse and recursively display nodes of histree
 function displayHistree(histree) {
 	var hd = new HistreeDisplay(histree.currentNode);
-	var node = null;
-	node = hd.next;
-// 	while (node = hd.next) {
-		displayNode(node, hd.curIndent);
+	var node = hd.curNode;
+	while (node = hd.next()) {
+		displayNode(node, hd.getIndent());
+	}
+// 
+// 	for (var i = 0; i < 5; i++) {
+// 		if (!node) {
+// 			break;
+// 		}
+// 		displayNode(node, hd.getIndent());
+// 		node = hd.next();
 // 	}
+// 	node = hd.next;
+//  	while (node = hd.next) {
+// 		displayNode(node, hd.curIndent);
+//  	}
 }
 // 	chrome.tabs.query({active: true, currentWindow: true},
 // 		function (tabs) {
@@ -369,8 +383,13 @@ function test(condition, message) {
 
 document.addEventListener('DOMContentLoaded',
 	function () {
+		var test = true;
 		chrome.runtime.getBackgroundPage(
 			function (bgPage) {
+				if (test) {
+					displayHistree(bgPage.buildTestTree());
+					return;
+				}
 				chrome.tabs.query({active: true, currentWindow: true},
 					function (tabs) {
 						if (tabs.length > 1) {
