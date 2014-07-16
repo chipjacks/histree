@@ -23,22 +23,27 @@ HistreeDisplay.prototype.jumpTo = function (node) {
 }
 
 HistreeDisplay.prototype.next = function () {
-	// Return either older brother or parent.
+	// Return either older brother, older brothers youngest child, or parent.
 	// Increase indent if moving from youngest child to older brother.
 	// Decrease indent if moving from oldest child to parent (except when oldest
 	// is an only child).
 	var next = null;
 	if (this.curNode.isOldestChild()) {
+		// moving to parent
 		next = this.curNode.parent;
-		if (!next) {
-			return null;
-		}
-		if (next.children.length > 1) {
+		if (next && next.children.length > 1) {
 			this.curIndent -= 1;
 		}
 	} else {
+		// moving to big bro, or big bro's children
 		next = this.curNode.bigBro();
-		if (this.curNode.isYoungestChild()) {
+		if (next.children.length) {
+			next = next.children[next.children.length - 1];
+			if (!next.isYoungestChild()) {
+				console.error("not youngest child");
+			}
+			this.curIndent += 1;
+		} else if (this.curNode.isYoungestChild()) {
 			this.curIndent += 1;
 		}
 	}
@@ -51,13 +56,14 @@ HistreeDisplay.prototype.next = function () {
 }
 
 HistreeDisplay.prototype.prev = function () {
-	// return either little brother or oldest child.
+	// return either little brother, oldest child or parents lil bro.
 	// Increase indent if returning child, but not youngest child.
 	// Decrease indent if return little brother who is youngest child.
+	// TODO: broken, needs youngest child to parents lil bro case to be added.
 	var prev = null;
 	if (this.curNode.isYoungestChild()) {
 		if (this.curNode.children.length) {
-			prev = this.curNode.children[this.children.length - 1];
+			prev = this.curNode.children[this.curNode.children.length - 1];
 			if (!prev.isYoungestChild()) {
 				this.curIndent += 1;
 			}
@@ -82,8 +88,13 @@ HistreeDisplay.prototype.getIndent = function () {
 
 // Called on popup load to parse and recursively display nodes of histree
 function displayHistree(histree) {
-	var hd = new HistreeDisplay(histree.currentNode);
+	var startNode = histree.currentNode;
+	while (startNode.children.length) {
+		startNode = startNode.children[startNode.children.length - 1];
+	}
+	var hd = new HistreeDisplay(startNode);
 	var node = hd.curNode;
+	displayNode(node, hd.getIndent());
 	while (node = hd.next()) {
 		displayNode(node, hd.getIndent());
 	}
@@ -373,17 +384,9 @@ if (!Date.now) {
 	};
 }
 
-function test(condition, message) {
-	if (!condition) {
-		console.error(message);
-		return false;
-	}
-	return true;
-}
-
 document.addEventListener('DOMContentLoaded',
 	function () {
-		var test = true;
+		var test = false;
 		chrome.runtime.getBackgroundPage(
 			function (bgPage) {
 				if (test) {
