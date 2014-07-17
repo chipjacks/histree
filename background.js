@@ -101,12 +101,28 @@ Node.prototype.isYoungestChild = function() {
 	}
 }
 
+Node.prototype.youngestChild = function() {
+	if (!this.children.length) {
+		return null;
+	} else {
+		return this.children[this.children.length - 1];
+	}
+}
+
 Node.prototype.isOldestChild = function() {
 	if (!this.parent) {
 		return true;
 	} else {
 		var siblings = this.parent.children;
 		return siblings[0] === this;
+	}
+}
+
+Node.prototype.oldestChild = function() {
+	if (!this.children.length) {
+		return null;
+	} else {
+		return this.children[0];
 	}
 }
 

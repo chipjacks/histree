@@ -100,6 +100,26 @@ describe("Background page", function() {
 			child = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
 			expect(parent.children).toContain(child);
 		});
+
+		it("should know who its youngest child is", function() {
+			var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+			var child = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+			expect(parent.youngestChild()).toBe(child);
+			expect(child.youngestChild()).toBe(null);
+			child = parent;
+			parent = tr.urls["file:///Users/chipjacks/Applications/"];
+			expect(parent.youngestChild()).toBe(child);
+		});
+
+		it("should know who its oldest child is", function() {
+			var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+			var child = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
+			expect(parent.oldestChild()).toBe(child);
+			expect(child.oldestChild()).toBe(null);
+			child = tr.urls["file:///Users/chipjacks/Applications/Counter-Strike%20Condition%20Zero.app/"];
+			parent = tr.urls["file:///Users/chipjacks/Applications/"];
+			expect(parent.oldestChild()).toBe(child);
+		});
 	});
 });
 

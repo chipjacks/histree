@@ -8,7 +8,7 @@ describe("Popup window", function() {
 	describe("HistreeDisplay class", function() {
 
 		beforeEach(function() {
-			hd = new HistreeDisplay(tr.curNode);
+			hd = new HistreeDisplay(tr.currentNode);
 		});
 
 		describe("next method", function() {
@@ -35,9 +35,10 @@ describe("Popup window", function() {
 				expect(youngSibling.isYoungestChild()).toBe(true);
 				var olderSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
 				hd.jumpTo(youngSibling);
-				var prevIndent = hd.curIndent;
+				var prevIndent = hd.curNode.indent;
 				hd.next();
-				expect(hd.curIndent).toEqual(prevIndent + 1);
+				expect(hd.curNode.indent).toEqual(prevIndent + 1);
+				expect
 			});
 
 			it("should traverse from a sibling to an older siblings youngest child if the older sibling has children", function() {
@@ -51,9 +52,10 @@ describe("Popup window", function() {
 				var youngSibling = tr.urls["file:///Users/chipjacks/Applications/"];
 				var nephew = tr.urls["file:///Users/chipjacks/Dropbox/books/"];
 				hd.jumpTo(youngSibling);
-				var prevIndent = hd.curIndent;
+				var prevIndent = hd.curNode.indent;
 				hd.next();
-				expect(hd.curIndent).toEqual(prevIndent + 1);
+				expect(hd.curNode.indent).toEqual(prevIndent + 1);
+				expect(hd.curNode.indent).toBeTruthy();
 			});
 
 			it("should return null eventually", function() {
@@ -77,9 +79,24 @@ describe("Popup window", function() {
  					last = hd.next();
  				}
 			});
-
 		});
 	
+	});
+
+	xdescribe("tree drawing routine", function() {
+
+		beforeEach(function() {
+			spyOn(window, 'displayHistree');
+			spyOn(window, 'displayNode');
+			displayHistree(tr);
+		});
+
+		it("should call displayNode for every node in tree", function() {
+			for (var i = 0; i < nodes.length; i++) {
+				expect(window.displayNode).toHaveBeenCalledWith(tr.urls[nodes[i]["url"]]);
+			}
+		});
+
 	});
 
 });

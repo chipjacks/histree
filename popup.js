@@ -14,12 +14,14 @@ var brown = "#AD855C";
 // displayed.
 function HistreeDisplay(startNode) {
 	this.curNode = startNode;
-	this.curIndent = 0;
+	// this.curIndent = 0;
+	this.curNode.indent = 0;
 }
 
 HistreeDisplay.prototype.jumpTo = function (node) {
 	this.curNode = node;
-	this.curIndent = 0;
+	//this.curIndent = 0;
+	this.curNode.indent = 0;
 }
 
 HistreeDisplay.prototype.next = function () {
@@ -28,31 +30,26 @@ HistreeDisplay.prototype.next = function () {
 	// Decrease indent if moving from oldest child to parent (except when oldest
 	// is an only child).
 	var next = null;
-	if (this.curNode.isOldestChild()) {
-		// moving to parent
+	if (this.curNode.isOldestChild() && this.curNode.parent) {
+		// moving to parent, indent to match youngest child
 		next = this.curNode.parent;
-		if (next && next.children.length > 1) {
-			this.curIndent -= 1;
-		}
-	} else {
-		// moving to big bro, or big bro's children
+		next.indent = next.youngestChild().indent;
+	} else if (this.curNode.bigBro()) {
+		// moving to big brother or his children if he has some
 		next = this.curNode.bigBro();
-		if (next.children.length) {
-			next = next.children[next.children.length - 1];
-			if (!next.isYoungestChild()) {
-				console.error("not youngest child");
-			}
-			this.curIndent += 1;
-		} else if (this.curNode.isYoungestChild()) {
-			this.curIndent += 1;
+		while (next.youngestChild()) {
+			next = next.youngestChild();
+		}
+		if (this.curNode.isYoungestChild()) {
+			next.indent = this.curNode.indent + 1;
+		} else {
+			next.indent = this.curNode.indent;
 		}
 	}
 	if (next) {
 		this.curNode = next;
-		return next;
-	} else {
-		return null;
 	}
+	return next;
 }
 
 HistreeDisplay.prototype.prev = function () {
@@ -83,7 +80,7 @@ HistreeDisplay.prototype.prev = function () {
 }
 
 HistreeDisplay.prototype.getIndent = function () {
-	return this.curIndent;
+	return this.curNode.indent;
 }
 
 // Called on popup load to parse and recursively display nodes of histree
@@ -95,34 +92,15 @@ function displayHistree(histree) {
 	var hd = new HistreeDisplay(startNode);
 	var node = hd.curNode;
 	displayNode(node, hd.getIndent());
+	var count = 0;
 	while (node = hd.next()) {
 		displayNode(node, hd.getIndent());
+		count += 1;
+		//if (count > 10) break;
 	}
-// 
-// 	for (var i = 0; i < 5; i++) {
-// 		if (!node) {
-// 			break;
-// 		}
-// 		displayNode(node, hd.getIndent());
-// 		node = hd.next();
-// 	}
-// 	node = hd.next;
-//  	while (node = hd.next) {
-// 		displayNode(node, hd.curIndent);
-//  	}
+
+	drawTree();
 }
-// 	chrome.tabs.query({active: true, currentWindow: true},
-// 		function (tabs) {
-// 			if (tabs.length > 1) {
-// 				console.error(
-// 					"chrome.tabs.query returned more than 1 active tab.");
-// 			}
-// 			var tab = tabs[0];
-// 			var histree = eventPage.histrees[tab.id];
-// 			displayNode(tabs[0].id, visitList, histree.root, 0, 0);
-// 			setTimeout(drawTree, 20);
-// 		});
-//}
 
 function displayNode(node, indent) {
 	var visitList = document.getElementById('visit-list');
@@ -134,8 +112,10 @@ function displayNode(node, indent) {
 	var domain = document.createElement('div');
 
 	li.className = "entry";
-// 	li.setAttribute("id", "li" + myId);
-// 	li.setAttribute("parentId", "li" + parentId);
+ 	li.setAttribute("id", "li" + node.id);
+	if (node.parent) {
+ 		li.setAttribute("parentId", "li" + node.parent.id);
+	}
 	li.href = node.url;
 	li.style.marginLeft = 25 + indent * 20 + "px";
 	li.style.cursor = "pointer";
@@ -148,6 +128,7 @@ function displayNode(node, indent) {
 
 	a.href = node.url;
 	a.innerHTML = node.title;
+
 
 // 	// Setup event callbacks
 // 	li.onclick = function () {
