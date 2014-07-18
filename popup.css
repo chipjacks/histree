@@ -1,25 +1,18 @@
 body {
-	width: 800px;
-	height: 400px;
-	font-family: "Segoe UI", Candara, "Bitstream Vera Sans", "DejaVu Sans", "Bitstream Vera Sans", "Trebuchet MS", Verdana, "Verdana Ref", sans-serif;
+	width: 500px;
+	height: 100%;
+	max-height: 800px;
+	font-family: "Lucida Grande", "Segoe UI", Candara, "Bitstream Vera Sans", "DejaVu Sans", "Bitstream Vera Sans", "Trebuchet MS", Verdana, "Verdana Ref", sans-serif;
 	font-size: 85%;
 	margin: 0px;
+	padding-top: 3px;
 }
 #inner-div {
 	height: 100%;
 }
-#info-div {
-	width: 100px;
-	overflow: hidden;
-	float: left;
-	border-right-style: solid;
-	border-right-width: 1px;
-	border-right-color: #DCDCDC;
-	height: 100%;
-}
 #link-div {
 	height: 100%;
-	overflow-x: scroll;
+	overflow-x: hidden;
 	overflow-y: scroll;
 	position: relative;
 }
@@ -42,12 +35,11 @@ ol#visit-list {
 	display:inline-block;
 	height: 36px;
 	display: block;
-	background-position: 0px 3px;
+	background-position: 3px 3px;
 	background-repeat: no-repeat;
 	background-size: 16px;
-	line-height: 21px;
-	padding-bottom: 1px;
-	padding-left: 20px;
+	line-height: 20px;
+	padding-left: 25px;
 }
 li.entry:hover {
 	background-color: AliceBlue;
@@ -61,22 +53,17 @@ li.entry:hover {
 	white-space: nowrap;
 	padding-left: 10px;
 	color: rgb(151, 156, 160);
-	line-height: 15px;
+	line-height: 12px;
+	font-size: 82%;
 }
 .title a {
 	color: rgb(48, 57, 66);
 	text-decoration: none;
 }
-#thumbnail-div {
-	width: 100%;
-	height: 100%;
-	text-align: center;
-	white-space: nowrap;
-	overflow:hidden;
-}
 .lastvisit {
 	float: left;
 	overflow: hidden;
-	line-height: 15px;
+	line-height: 12px;
 	color: rgb(151, 156, 160);
+	font-size: 82%;
 }

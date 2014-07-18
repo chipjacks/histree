@@ -2,10 +2,6 @@
 // Javascript functions for recording page visits in tree data structure
 // Chip Jackson, July 2014
 
-// 4/13/2014: just started refactoring popup.js
-// 4/16/2014: just finished ensuring children arrays stay in sorted order.
-// 		Currently working on building HistreeDisplay class.
-
 "use strict";
 
 //------------------------------------------------------------------------------
@@ -13,19 +9,29 @@
 var histree = new Tree();	// inidividual tab histrees, keyed by tabId
 var lastVisit = null;	// stores last visited page for each tab
 var THUMBNAILS = false;
+var lastActiveTabId = 0;
+var activeTabId = 0;
+var newTabRegex = /.*New Tab.*/;
 
 // TODO: deal with any necessary initilization
-//function init() {
-//// Called when extension is installed or upgraded
-//}
-//chrome.runtime.onInstalled.addListener(init);
+function init() {
+// Called when extension is installed or upgraded
+	console.info("Histree extension initializing");
+}
+chrome.runtime.onInstalled.addListener(init);
 
+function startup() {
+// Called when extension is started
+	console.info("Histree extension starting");
+}
+chrome.runtime.onStartup.addListener(startup);
 //------------------------------------------------------------------------------
 // Tree class methods
 function Tree() {
 	this.root = null;
-	this.currentNode = {};
+	this.currentNode = {};	//tracks current node for each tab
 	this.urls = {};		// allow for fast node lookup by url
+	this.youngestNode = null;
 }
 
 Tree.prototype.addNode = function (node) {
@@ -43,7 +49,7 @@ Tree.prototype.addNode = function (node) {
 
 			// see if the url is already in the tree
 			var oldNode = thisTree.urls[node.url];
-			if (oldNode) {
+			if (oldNode && oldNode.tabId == node.tabId) {
 				// it is already in the tree
 				oldNode.time = node.time;
 				if (oldNode.parent) {
@@ -64,13 +70,18 @@ Tree.prototype.addNode = function (node) {
 			if (!thisTree.root) {
 				thisTree.root = node;
 			} else {
-				node.parent = thisTree.currentNode[tab.id];
-				if (!node.parent) {
-					// must be a new tab
-					node.parent = thisTree.currentNode[tab.openerTabId];
+				if (node.title.match(newTabRegex)) {
+					node.parent = thisTree.currentNode[lastActiveTabId];
 					if (!node.parent) {
-						console.error("couldnt find a parent!");
+						node.parent = thisTree.currentNode[tab.openerTabId];
 					}
+				} else if (thisTree.currentNode[tab.id]) {
+					node.parent = thisTree.currentNode[tab.id];
+				} else {
+					node.parent = thisTree.currentNode[tab.openerTabId];
+				}
+				if (!node.parent) {
+					console.error("couldnt find a parent!");
 				}
 				node.parent.children.push(node);
 			}
@@ -80,6 +91,8 @@ Tree.prototype.addNode = function (node) {
 
 			// traverse to new currentNode
 			thisTree.currentNode[node.tabId] = node;
+
+			thisTree.youngestNode = node;
 
 			// make sure node has all data filled in
 			if (!node.isValid()) {
@@ -234,7 +247,12 @@ function onTabUpdated(tabId, changeInfo, tab) {
 	}
 	if (changeInfo.status === 'complete') {
 		var lv;
-		if (lastVisit && lastVisit.url === tab.url && lastVisit.historyVisit) {
+		if (tab.title.match(newTabRegex)) {
+			lv = new Node({url: tab.url, title: tab.title,
+				time: Date.now(), tabId: tab.id, tabUpdate: true});
+			histree.addNode(lv);
+		} else if (lastVisit && lastVisit.url === tab.url &&
+				lastVisit.historyVisit) {
 			// onHistoryItemVisit already picked it up, add it to tree
 			lv = lastVisit;
 			if (tab.title) {
@@ -272,9 +290,15 @@ chrome.tabs.onUpdated.addListener(onTabUpdated);
 
 //------------------------------------------------------------------------------
 // Callbacks for tab creation and removal
+
+function onTabActivated(activeInfo) {
+	lastActiveTabId = activeTabId;
+	activeTabId = activeInfo.tabId;
+}
+chrome.tabs.onActivated.addListener(onTabActivated);
+
 function onTabCreated(tab) {
 	console.info("Tab created: ", tab);
-	// histrees[tab.id] = new Tree();
 }
 chrome.tabs.onCreated.addListener(onTabCreated);
 
@@ -283,6 +307,12 @@ function onTabRemoved(tabId, removeInfo) {
 	console.info("Tab removed: tabId = %d, removeInfo = %o", tabId, removeInfo);
 }
 chrome.tabs.onRemoved.addListener(onTabRemoved);
+
+function onTabReplaced(addedTabId, removedTabId) {
+	console.info("Tab replaced: addedTabId = %d, removedTabId = %d", addedTabId, removedTabId);
+	histree.currentNode[addedTabId] = histree.currentNode[removedTabId];
+}
+chrome.tabs.onReplaced.addListener(onTabReplaced);
 
 //------------------------------------------------------------------------------
 // Testing/utility functions

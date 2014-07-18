@@ -3,10 +3,12 @@
 // popup window.
 // Chip Jackson, July 2014
 
+"use strict";
+
 //------------------------------------------------------------------------------
 // GLOBALS
 //var green = "#5CD65C";
-var green = "00cc00";
+var green = "#00cc00";
 var lightgreen = "#00ff00";
 var darkgreen = "#009900";
 var brown = "#AD855C";
@@ -20,13 +22,11 @@ var PARENT_COLOR = "#FF5F58";
 // displayed.
 function HistreeDisplay(startNode) {
 	this.curNode = startNode;
-	// this.curIndent = 0;
 	this.curNode.indent = 0;
 }
 
 HistreeDisplay.prototype.jumpTo = function (node) {
 	this.curNode = node;
-	//this.curIndent = 0;
 	this.curNode.indent = 0;
 }
 
@@ -93,8 +93,8 @@ HistreeDisplay.prototype.getIndent = function () {
 // Methods to build HTML list of histree links in popup
 
 // Called on popup load to parse and recursively display nodes of histree
-function displayHistree(histree) {
-	var startNode = histree.root;
+function displayHistree(node) {
+	var startNode = node;
 	while (startNode.children.length) {
 		startNode = startNode.children[startNode.children.length - 1];
 	}
@@ -159,24 +159,16 @@ function displayNode(node, indent) {
 		// eventPage.updateNode(.url, Date.now);
 	}
 	li.onmouseover = function () {
-		var tb = document.getElementById("thumbnail");
-		tb.removeAttribute("height");
-		tb.removeAttribute("width");
-		var div = document.getElementById("thumbnail-div");
-		tb.src = node.img;
-		tb_ratio = tb.width / tb.height;
-		tb.width = div.clientWidth - 2;
-		tb.height = tb.width / tb_ratio;
 		var host = node.url;
 		domain.innerHTML = host;
 
 		lastvisit.innerHTML = lastVisitToString(node.time);
-		//colorBranch(li, green);
+		colorBranch(li, green);
 		colorPoint(li, green);
 		highlightRelatives(node);
 	}
 	li.onmouseout = function () {
-		//colorBranch(li, brown);
+		colorBranch(li, brown);
 		colorPoint(li, brown);
 		domain.innerHTML = "";
 		lastvisit.innerHTML = "";
@@ -283,12 +275,12 @@ function colorBranch(toLi, color) {
 		colorLine(id, color);
 		colorBranch(parent, color);
 	}
-	colorPoint(toLi, green);
+	colorPoint(toLi, brown);
 }
 
 function drawLine(a, b, color, id) {
 	var svg = document.getElementById('link-svg'); //TODO: make static
-	line = '<polyline id="' + id + 
+	var line = '<polyline id="' + id + 
 		'line" points="' + a.x + ',' + a.y + ' ' + a.x + ',' + (b.y + 12) + 
 		' ' + a.x + ',' + (b.y + 12) + ' ' + b.x + ',' + b.y + '" ' +
 		'style="fill: none; stroke: ' + color + '; stroke-width: 3;"/>';
@@ -305,8 +297,8 @@ function colorLine(id, color) {
 
 function drawPoint(a, id) {
 	var svg = document.getElementById('link-svg'); //TODO: make static
-	circle = '<circle id="' + id + 'point" cx="' + a.x + '" cy="' + a.y +
-		'" r="4" stroke="' + green + '" fill="' + green + '" />';
+	var circle = '<circle id="' + id + 'point" cx="' + a.x + '" cy="' + a.y +
+		'" r="4" stroke="' + brown + '" fill="' + brown + '" />';
 	svg.innerHTML += circle;
 }
 
@@ -337,7 +329,7 @@ document.addEventListener('DOMContentLoaded',
 					console.error("No histree found for tab %d", tab.id);
 					return;
 				}
-				displayHistree(histree);
+				displayHistree(histree.root);
 			});
 	});
 
