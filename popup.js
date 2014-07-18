@@ -5,8 +5,14 @@
 
 //------------------------------------------------------------------------------
 // GLOBALS
-var green = "#5CD65C";
+//var green = "#5CD65C";
+var green = "00cc00";
+var lightgreen = "#00ff00";
+var darkgreen = "#009900";
 var brown = "#AD855C";
+var CHILD_COLOR = "#11CAF0";
+var SIBLING_COLOR = "#3FD657";
+var PARENT_COLOR = "#FF5F58";
 
 //------------------------------------------------------------------------------
 // HistreeDisplay class methods
@@ -83,6 +89,9 @@ HistreeDisplay.prototype.getIndent = function () {
 	return this.curNode.indent;
 }
 
+//------------------------------------------------------------------------------
+// Methods to build HTML list of histree links in popup
+
 // Called on popup load to parse and recursively display nodes of histree
 function displayHistree(histree) {
 	var startNode = histree.currentNode;
@@ -103,6 +112,21 @@ function displayHistree(histree) {
 }
 
 function displayNode(node, indent) {
+	// HTML DOM structure:
+	// <li class="entry" id="li7" parentid="li2" style="background-image: 
+	//   url(chrome://favicon/;">
+	//   <div class="title">
+	//     <a href="https://chrome.google.com/webstore/">
+	//       Chrome Web Store - Extensions
+	//     </a>
+	//   </div>
+	//   <div class="lastvisit">
+	//     5 min ago
+	//   </div>
+	//   <div class="domain">
+	//     chrome.google.com
+	//   </div>
+	//</li>
 	var visitList = document.getElementById('visit-list');
 
 	var li = document.createElement('li');
@@ -129,32 +153,35 @@ function displayNode(node, indent) {
 	a.href = node.url;
 	a.innerHTML = node.title;
 
+	// Setup event callbacks
+	li.onclick = function () {
+		chrome.tabs.update(node.tabId, {url: node.url});
+		// eventPage.updateNode(.url, Date.now);
+	}
+	li.onmouseover = function () {
+		var tb = document.getElementById("thumbnail");
+		tb.removeAttribute("height");
+		tb.removeAttribute("width");
+		var div = document.getElementById("thumbnail-div");
+		tb.src = node.img;
+		tb_ratio = tb.width / tb.height;
+		tb.width = div.clientWidth - 2;
+		tb.height = tb.width / tb_ratio;
+		var host = node.url;
+		domain.innerHTML = host;
 
-// 	// Setup event callbacks
-// 	li.onclick = function () {
-// 		chrome.tabs.update(tabId, {url: data.url});
-// 		eventPage.updateNode(data.url, Date.now);
-// 	}
-// 	li.onmouseover = function () {
-// 		var tb = document.getElementById("thumbnail");
-// 		tb.removeAttribute("height");
-// 		tb.removeAttribute("width");
-// 		var div = document.getElementById("thumbnail-div");
-// 		tb.src = data.img;
-// 		tb_ratio = tb.width / tb.height;
-// 		tb.width = div.clientWidth - 2;
-// 		tb.height = tb.width / tb_ratio;
-// 		var host = data.url;
-// 		domain.innerHTML = host;
-// 
-// 		lastvisit.innerHTML = lastVisitToString(data.lastVisit);
-// 		colorBranch(li, green);
-// 	}
-// 	li.onmouseout = function () {
-// 		colorBranch(li, brown);
-// 		domain.innerHTML = "";
-// 		lastvisit.innerHTML = "";
-// 	}
+		lastvisit.innerHTML = lastVisitToString(node.time);
+		//colorBranch(li, green);
+		colorPoint(li, green);
+		highlightRelatives(node);
+	}
+	li.onmouseout = function () {
+		//colorBranch(li, brown);
+		colorPoint(li, brown);
+		domain.innerHTML = "";
+		lastvisit.innerHTML = "";
+		unhighlightRelatives(node);
+	}
 
 	title.appendChild(a);
 	li.appendChild(title);
@@ -163,101 +190,38 @@ function displayNode(node, indent) {
 	visitList.appendChild(li);
 }
 
-
-function nextId() {
-	if (!nextId.i) {
-		nextId.i = 0;
+function highlightRelatives(node) {
+	for (var i = 0; i < node.children.length; i++) {
+		colorNode(node.children[i], CHILD_COLOR);
 	}
-	nextId.i += 1;
-	return nextId.i;
+	if (node.parent) {
+		colorNode(node.parent, PARENT_COLOR);
+		for (var i = 0; i < node.parent.children.length; i++) {
+			colorNode(node.parent.children[i], SIBLING_COLOR);
+		}
+	}
 }
 
-// function displayNode(tabId, list, node, initialIndent, parentId) {
-// 	var myId = nextId();
-// 	if (node.children.length) {
-// 		// display it's children, youngest first
-// 		var children = node.children.sort(function (a, b) {
-// 			return b.data.lastVisit - a.data.lastVisit; // sort: youngest to oldest
-// 		});
-// 		displayNode(tabId, list, children[0], initialIndent, myId);
-// 		for (var i = 1; i < children.length; i++) {
-// 			displayNode(tabId, list, children[i], initialIndent+1, myId);
-// 		}
-// 	} 
-// 	// then display the node
-// 	appendListEntry(tabId, list, node.data, initialIndent, myId, parentId);
-// }
-
-function appendListEntry(tabId, list, data, indentLevel, myId, parentId) {
-	// HTML DOM structure:
-	// <li class="entry" id="li7" parentid="li2" style="background-image: 
-	//   url(chrome://favicon/;">
-	//   <div class="title">
-	//     <a href="https://chrome.google.com/webstore/">
-	//       Chrome Web Store - Extensions
-	//     </a>
-	//   </div>
-	//   <div class="lastvisit">
-	//     5 min ago
-	//   </div>
-	//   <div class="domain">
-	//     chrome.google.com
-	//   </div>
-	//</li>
-	var li = document.createElement('li');
-	var title = document.createElement('div');
-	var a = document.createElement('a');
-	var lastvisit = document.createElement('div');
-	var domain = document.createElement('div');
-
-	li.className = "entry " + "tab" + tabId;
-	li.setAttribute("id", "li" + myId);
-	li.setAttribute("parentId", "li" + parentId);
-	li.href = data.url;
-	li.style.marginLeft = 25 + indentLevel * 20 + "px";
-	li.style.cursor = "pointer";
-
-	li.style.backgroundImage = "url(" + data.favicon + ")";
-
-	title.className = "title";
-	domain.className = "domain";
-	lastvisit.className = "lastvisit";
-
-	a.href = data.url;
-	a.innerHTML = data.title;
-
-	// Setup event callbacks
-	li.onclick = function () {
-		chrome.tabs.update(tabId, {url: data.url});
-		eventPage.updateNode(data.url, Date.now);
+function unhighlightRelatives(node) {
+	for (var i = 0; i < node.children.length; i++) {
+		colorNode(node.children[i], brown);
 	}
-	li.onmouseover = function () {
-		var tb = document.getElementById("thumbnail");
-		tb.removeAttribute("height");
-		tb.removeAttribute("width");
-		var div = document.getElementById("thumbnail-div");
-		tb.src = data.img;
-		tb_ratio = tb.width / tb.height;
-		tb.width = div.clientWidth - 2;
-		tb.height = tb.width / tb_ratio;
-		var host = data.url;
-		domain.innerHTML = host;
-
-		lastvisit.innerHTML = lastVisitToString(data.lastVisit);
-		colorBranch(li, green);
+	if (node.parent) {
+		colorNode(node.parent, brown);
+		for (var i = 0; i < node.parent.children.length; i++) {
+			colorNode(node.parent.children[i], brown);
+		}
 	}
-	li.onmouseout = function () {
-		colorBranch(li, brown);
-		domain.innerHTML = "";
-		lastvisit.innerHTML = "";
-	}
-
-	title.appendChild(a);
-	li.appendChild(title);
-	li.appendChild(lastvisit);
-	li.appendChild(domain);
-	list.appendChild(li);
 }
+
+function colorNode(node, color) {
+	if (!node) return;
+ 	var li = document.getElementById("li" + node.id);
+ 	colorPoint(li, color);
+}
+
+//------------------------------------------------------------------------------
+// Utility Methods
 
 function lastVisitToString(lv) {
 	var now = new Date();
@@ -291,6 +255,8 @@ function lastVisitToString(lv) {
 	}
 }
 
+//------------------------------------------------------------------------------
+// Methods to draw tree branches and leaves using SVG
 
 // Functions for drawing the SVG lines and points linking histree nodes
 function drawTree() {
@@ -355,14 +321,6 @@ function colorPoint(li, color) {
 
 function getCoords(li) {
 	return {x: parseInt(li.style.marginLeft) - 8, y: li.offsetTop + 11};
-}
-
-
-// Work around for old browsers that haven't implemented Date().now()
-if (!Date.now) {
-	Date.now = function now() {
-		return new Date().getTime();
-	};
 }
 
 document.addEventListener('DOMContentLoaded',

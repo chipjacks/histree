@@ -163,6 +163,14 @@ function nextNodeId() {
 // registered as historyItemVisits when you navigate to facebook.com, so we need
 // to wait for an onTabupdated with status "complete" to make sure we are at our
 // final destination before adding a page to histree.
+
+// Work around for old browsers that haven't implemented Date.now()
+if (!Date.now) {
+	Date.now = function now() {
+		return new Date().getTime();
+	};
+}
+
 function onHistoryItemVisited(histItem) {
 	console.info("HistoryItem visited: ", histItem);
 
@@ -174,6 +182,7 @@ function onHistoryItemVisited(histItem) {
 			}
 
 			var tab = tabs[0];
+			var lv;
 			if (lastVisit[tab.id] && lastVisit[tab.id].url === histItem.url &&
 					lastVisit[tab.id].tabUpdate) {
 				// onTabUpdated already picked it up, add it to the tree
@@ -182,6 +191,13 @@ function onHistoryItemVisited(histItem) {
 					// callback add it to the tree
 					lastVisit[tab.id].historyVisit = true;
 				} else {
+					lv = lastVisit[tab.id];
+					if (histItem.title) {
+						lv.title = histItem.title;
+					}
+					if (!histrees[tab.id]) {
+						histrees[tab.id] = new Tree();
+					}
 					histrees[tab.id].addNode(lastVisit[tab.id]);
 				}
 			} else {
@@ -218,8 +234,11 @@ function onTabUpdated(tabId, changeInfo, tab) {
 				lastVisit[tab.id].historyVisit) {
 			// onHistoryItemVisit already picked it up, add it to tree
 			lv = lastVisit[tab.id];
-			if (!lv.title) {
+			if (tab.title) {
 				lv.title = tab.title;
+			}
+			if (!histrees[tab.id]) {
+				histrees[tab.id] = new Tree();
 			}
 			histrees[tab.id].addNode(lv);
 			if (THUMBNAILS) {

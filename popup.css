@@ -9,7 +9,7 @@ body {
 	height: 100%;
 }
 #info-div {
-	width: 425px;
+	width: 100px;
 	overflow: hidden;
 	float: left;
 	border-right-style: solid;
