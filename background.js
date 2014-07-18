@@ -10,8 +10,8 @@
 
 //------------------------------------------------------------------------------
 // GLOBALS
-var histrees = {};	// inidividual tab histrees, keyed by tabId
-var lastVisit = {};	// stores last visited page for each tab
+var histree = new Tree();	// inidividual tab histrees, keyed by tabId
+var lastVisit = null;	// stores last visited page for each tab
 var THUMBNAILS = false;
 
 // TODO: deal with any necessary initilization
@@ -24,51 +24,68 @@ var THUMBNAILS = false;
 // Tree class methods
 function Tree() {
 	this.root = null;
-	this.currentNode = null;
+	this.currentNode = {};
 	this.urls = {};		// allow for fast node lookup by url
 }
 
 Tree.prototype.addNode = function (node) {
 // appends node as child of Tree.currentNode, points Tree.currentNode to node.
 	console.info("Tree.prototype.addNode called with: ", JSON.stringify(node));
+	var thisTree = this;
+	// lookup tabid
+	chrome.tabs.query({active: true, currentWindow: true},
+		function (tabs) {
+			if (tabs.length > 1) {
+				console.error("chrome.tabs.query returned more than 1 active tab.");
+			}
 
-	// see if the url is already in the tree
-	var oldNode = this.urls[node.url];
-	if (oldNode) {
-		// it is already in the tree
-		oldNode.time = node.time;
-		if (oldNode.parent) {
-			// keep it's array of siblings sorted from oldest to youngest
-			var siblings = oldNode.parent.children;
-			siblings.splice(siblings.indexOf(oldNode), 1);
-			siblings.push(oldNode);
-		}
-		this.currentNode = oldNode;
-		return;
-	}
+			var tab = tabs[0];
 
-	// give the node a unique id
-	node.id = nextNodeId();
+			// see if the url is already in the tree
+			var oldNode = thisTree.urls[node.url];
+			if (oldNode) {
+				// it is already in the tree
+				oldNode.time = node.time;
+				if (oldNode.parent) {
+					// keep it's array of siblings sorted from oldest to youngest
+					var siblings = oldNode.parent.children;
+					siblings.splice(siblings.indexOf(oldNode), 1);
+					siblings.push(oldNode);
+				}
+				thisTree.currentNode[node.tabId] = oldNode;
+				return;
+			}
 
-	// add it to the tree
-	node.children = [];
-	if (!this.root) {
-		this.root = node;
-	} else {
-		node.parent = this.currentNode;
-		this.currentNode.children.push(node);
-	}
-	
-	// add node url to urls hash
-	this.urls[node.url] = node;
+			// give the node a unique id
+			node.id = nextNodeId();
 
-	// traverse to new currentNode
-	this.currentNode = node;
+			// add it to the tree
+			node.children = [];
+			if (!thisTree.root) {
+				thisTree.root = node;
+			} else {
+				node.parent = thisTree.currentNode[tab.id];
+				if (!node.parent) {
+					// must be a new tab
+					node.parent = thisTree.currentNode[tab.openerTabId];
+					if (!node.parent) {
+						console.error("couldnt find a parent!");
+					}
+				}
+				node.parent.children.push(node);
+			}
+			
+			// add node url to urls hash
+			thisTree.urls[node.url] = node;
 
-	// make sure node has all data filled in
-	if (!node.isValid()) {
-		console.error("Tree.prototype.addNode called with invalid node: ", node);
-	}
+			// traverse to new currentNode
+			thisTree.currentNode[node.tabId] = node;
+
+			// make sure node has all data filled in
+			if (!node.isValid()) {
+				console.error("Tree.prototype.addNode called with invalid node: ", node);
+			}
+		});
 };
 
 //------------------------------------------------------------------------------
@@ -173,39 +190,26 @@ if (!Date.now) {
 
 function onHistoryItemVisited(histItem) {
 	console.info("HistoryItem visited: ", histItem);
-
-	// lookup tabid
-	chrome.tabs.query({active: true, currentWindow: true},
-		function (tabs) {
-			if (tabs.length > 1) {
-				console.error("chrome.tabs.query returned more than 1 active tab.");
+	var lv;
+	if (lastVisit && lastVisit.url === histItem.url &&
+			lastVisit.tabUpdate) {
+		// onTabUpdated already picked it up, add it to the tree
+		if (THUMBNAILS && !lastVisit[tab.id].img) {
+			// still need to capture a thumbnail for it, let pendingCaptures
+			// callback add it to the tree
+			lastVisit.historyVisit = true;
+		} else {
+			lv = lastVisit;
+			if (histItem.title) {
+				lv.title = histItem.title;
 			}
-
-			var tab = tabs[0];
-			var lv;
-			if (lastVisit[tab.id] && lastVisit[tab.id].url === histItem.url &&
-					lastVisit[tab.id].tabUpdate) {
-				// onTabUpdated already picked it up, add it to the tree
-				if (THUMBNAILS && !lastVisit[tab.id].img) {
-					// still need to capture a thumbnail for it, let pendingCaptures
-					// callback add it to the tree
-					lastVisit[tab.id].historyVisit = true;
-				} else {
-					lv = lastVisit[tab.id];
-					if (histItem.title) {
-						lv.title = histItem.title;
-					}
-					if (!histrees[tab.id]) {
-						histrees[tab.id] = new Tree();
-					}
-					histrees[tab.id].addNode(lastVisit[tab.id]);
-				}
-			} else {
-				// add some info, let onTabUpdated add it to the tree
-				lastVisit[tab.id] = new Node({url: histItem.url, title: histItem.title,
-					time: Date.now(), tabId: tab.id, historyVisit: true});
-			}
-		});
+			histree.addNode(lv);
+		}
+	} else {
+		// add some info, let onTabUpdated add it to the tree
+		lastVisit = new Node({url: histItem.url, title: histItem.title,
+			time: Date.now(), historyVisit: true});
+	}
 }
 chrome.history.onVisited.addListener(onHistoryItemVisited);
 
@@ -228,19 +232,16 @@ function onTabUpdated(tabId, changeInfo, tab) {
 			}, 500);
 		}
 	}
-	if (changeInfo.status === 'complete' && tab.active) {
+	if (changeInfo.status === 'complete') {
 		var lv;
-		if (lastVisit[tab.id] && lastVisit[tab.id].url === tab.url &&
-				lastVisit[tab.id].historyVisit) {
+		if (lastVisit && lastVisit.url === tab.url && lastVisit.historyVisit) {
 			// onHistoryItemVisit already picked it up, add it to tree
-			lv = lastVisit[tab.id];
+			lv = lastVisit;
 			if (tab.title) {
 				lv.title = tab.title;
 			}
-			if (!histrees[tab.id]) {
-				histrees[tab.id] = new Tree();
-			}
-			histrees[tab.id].addNode(lv);
+			lv.tabId= tab.id;
+			histree.addNode(lv);
 			if (THUMBNAILS) {
 				pendingCaptures[tab.id] = function () {
 					chrome.tabs.captureVisibleTab(function (dataUrl) {
@@ -251,9 +252,9 @@ function onTabUpdated(tabId, changeInfo, tab) {
 			}
 		} else {
 			// add some info, let onHistoryItemVisit add it to tree
-			lastVisit[tab.id] = new Node({url: tab.url, title: tab.title,
+			lastVisit = new Node({url: tab.url, title: tab.title,
 				time: Date.now(), tabId: tab.id, tabUpdate: true});
-			lv = lastVisit[tab.id];
+			lv = lastVisit;
 			if (THUMBNAILS) {
 				pendingCaptures[tab.id] = function () {
 					chrome.tabs.captureVisibleTab(function (dataUrl) {
@@ -273,16 +274,13 @@ chrome.tabs.onUpdated.addListener(onTabUpdated);
 // Callbacks for tab creation and removal
 function onTabCreated(tab) {
 	console.info("Tab created: ", tab);
-	histrees[tab.id] = new Tree();
+	// histrees[tab.id] = new Tree();
 }
 chrome.tabs.onCreated.addListener(onTabCreated);
 
 function onTabRemoved(tabId, removeInfo) {
 	// tab was closed, cleanup histree data
 	console.info("Tab removed: tabId = %d, removeInfo = %o", tabId, removeInfo);
-
-	delete histrees[tabId];
-	delete lastVisit[tabId];
 }
 chrome.tabs.onRemoved.addListener(onTabRemoved);
 

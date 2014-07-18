@@ -94,7 +94,7 @@ HistreeDisplay.prototype.getIndent = function () {
 
 // Called on popup load to parse and recursively display nodes of histree
 function displayHistree(histree) {
-	var startNode = histree.currentNode;
+	var startNode = histree.root;
 	while (startNode.children.length) {
 		startNode = startNode.children[startNode.children.length - 1];
 	}
@@ -332,20 +332,12 @@ document.addEventListener('DOMContentLoaded',
 					displayHistree(bgPage.buildTestTree());
 					return;
 				}
-				chrome.tabs.query({active: true, currentWindow: true},
-					function (tabs) {
-						if (tabs.length > 1) {
-							console.error(
-								"chrome.tabs.query returned more than 1 active tab.");
-						}
-						var tab = tabs[0];
-						var histree = bgPage.histrees[tab.id];
-						if (!histree) {
-							console.error("No histree found for tab %d", tab.id);
-							return;
-						}
-						displayHistree(histree);
-					});
+				var histree = bgPage.histree;
+				if (!histree) {
+					console.error("No histree found for tab %d", tab.id);
+					return;
+				}
+				displayHistree(histree);
 			});
 	});
 
