@@ -260,6 +260,7 @@ function drawTree() {
 }
 
 function drawBranch(toLi, color) {
+	console.info("drawing branch %s", toLi.id);
 	var parent = document.getElementById(toLi.getAttribute("parentId"));
 	var id = toLi.id;
 	if (parent) {
@@ -315,6 +316,14 @@ function getCoords(li) {
 	return {x: parseInt(li.style.marginLeft) - 8, y: li.offsetTop + 11};
 }
 
+function selectNode(node) {
+	if (!node) {
+		return;
+	}
+	var li = document.getElementById("li" + node.id);
+	li.scrollIntoView();
+}
+
 document.addEventListener('DOMContentLoaded',
 	function () {
 		var test = false;
@@ -330,6 +339,36 @@ document.addEventListener('DOMContentLoaded',
 					return;
 				}
 				displayHistree(histree.root);
+
+				chrome.tabs.query({active: true, currentWindow: true},
+					function (tabs) {
+						if (tabs.length > 1) {
+							console.error("chrome.tabs.query returned more than 1 active tab.");
+						}
+						var tab = tabs[0];
+						setTimeout(function() {selectNode(histree.currentNode[tab.id]);}, 100);
+					});
+			});
+	});
+
+document.addEventListener('load',
+	function () {
+		chrome.runtime.getBackgroundPage(
+			function (bgPage) {
+				var histree = bgPage.histree;
+				if (!histree) {
+					console.error("No histree found for tab %d", tab.id);
+					return;
+				}
+
+				chrome.tabs.query({active: true, currentWindow: true},
+					function (tabs) {
+						if (tabs.length > 1) {
+							console.error("chrome.tabs.query returned more than 1 active tab.");
+						}
+						var tab = tabs[0];
+						selectNode(histree.currentNode[tab.id]);
+					});
 			});
 	});
 
