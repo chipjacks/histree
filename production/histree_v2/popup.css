@@ -1,0 +1,69 @@
+body {
+	width: 500px;
+	height: 100%;
+	max-height: 800px;
+	font-family: "Lucida Grande", "Segoe UI", Candara, "Bitstream Vera Sans", "DejaVu Sans", "Bitstream Vera Sans", "Trebuchet MS", Verdana, "Verdana Ref", sans-serif;
+	font-size: 85%;
+	margin: 0px;
+	padding-top: 3px;
+}
+#inner-div {
+	height: 100%;
+}
+#link-div {
+	height: 100%;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	position: relative;
+}
+#link-svg {
+	height: 100%;
+	width: 100%;
+	position: absolute;
+	z-index: -1;
+	overflow: scroll;
+}
+ol#visit-list {
+	position: relative;
+	display: inline-block;
+	min-width: 100%;
+	list-style-type: none;
+	padding-left: 0px;
+	margin: 0px;
+}
+.entry {
+	display:inline-block;
+	height: 36px;
+	display: block;
+	background-position: 3px 3px;
+	background-repeat: no-repeat;
+	background-size: 16px;
+	line-height: 20px;
+	padding-left: 25px;
+}
+li.entry:hover {
+	background-color: AliceBlue;
+}
+.entry .title {
+	white-space: nowrap;
+	overflow: hidden;
+}
+.entry .domain {
+	overflow: hidden;
+	white-space: nowrap;
+	padding-left: 10px;
+	color: rgb(151, 156, 160);
+	line-height: 12px;
+	font-size: 82%;
+}
+.title a {
+	color: rgb(48, 57, 66);
+	text-decoration: none;
+}
+.lastvisit {
+	float: left;
+	overflow: hidden;
+	line-height: 12px;
+	color: rgb(151, 156, 160);
+	font-size: 82%;
+}

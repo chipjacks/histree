@@ -1,0 +1,23 @@
+{
+	"manifest_version": 2,
+
+	"name": "Histree",
+	"description": "View and navigate all the branches of your histree.",
+	"version": "2.0",
+
+	"permissions": [
+		"history",
+		"tabs",
+		"chrome://favicon/"
+	],
+
+	"background": {
+		"scripts": ["background.js"],
+		"persistent": true
+	},
+
+	"browser_action": {
+		"default_icon": "histree.png",
+		"default_popup": "popup.html"
+	}
+}
