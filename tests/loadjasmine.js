@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	document.getElementById("loadjasmine").addEventListener('click', loadJasmine);
 });
 
+var TESTING = true;
+
 function loadJasmine() {
 	console.log("Loading Jasmine...");
 	var jasmineEnv = jasmine.getEnv();
@@ -27,4 +29,5 @@ function loadJasmine() {
 	}
 
 	document.getElementById("runtests").addEventListener('click', runTests);
+
 }

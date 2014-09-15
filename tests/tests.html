@@ -11,42 +11,17 @@
   <script type="text/javascript" src="jasmine/lib/jasmine-2.0.0/jasmine-html.js"></script>
   <script type="text/javascript" src="jasmine/lib/jasmine-2.0.0/boot.js"></script>
 
-	<script type="text/javascript">
-		chrome = {
-			history: {
-				onVisited: {
-					addListener: function(){}
-				}
-			},
-			tabs: {
-				onUpdated: {
-					addListener: function() {}
-				},
-				onCreated: {
-					addListener: function() {}
-				},
-				onRemoved: {
-					addListener: function() {}
-				},
-				query: function() {}
-			},
-			runtime: {
-				getBackgroundPage: function() {}
-			}
-		}
-	</script>
+  <script type="text/javascript" src="loadjasmine.js"></script>
 
   <!-- include source files here. These can be directly imported from wherever you're storing your
        background and content scripts.  -->
-  <script type="text/javascript" src="../background.js"></script>
-  <script type="text/javascript" src="../popup.js"></script>
+  <script type="text/javascript" src="../tree.js"></script>
+  <script type="text/javascript" src="../histreeDisplay.js"></script>
 
   <!-- include spec files here -->
-  <script type="text/javascript" src="spec/backgroundSpec.js"></script>
-  <script type="text/javascript" src="spec/popupSpec.js"></script>
+  <script type="text/javascript" src="spec/treeSpec.js"></script>
+  <script type="text/javascript" src="spec/histreeDisplaySpec.js"></script>
   
-  <script type="text/javascript" src="loadjasmine.js"></script>
-
 </head>
 
   <body>

@@ -2,7 +2,6 @@
 // Background page tests
 // Chip Jackson, July 2014
 
-
 //------------------------------------------------------------------------------
 // Testing/utility functions
 var nodes = [
@@ -39,24 +38,49 @@ var nodes = [
 	{"url":"file:///Users/chipjacks/Applications/Contents/","title":"Index of /Users/chipjacks/Applications/Contents/","time":1405450410416,"tabId":224,"tabUpdate":true,"children":[]}
 ];
 
-var buildTestTree = function() {
+function buildTestTree(finished) {
 	var tr = new Tree();
+	if (document.readyState != "complete") {
+		throw "Document not loaded";
+	}
 
+	chrome.tabs = {
+		query: function(blah, callback) {
+			callback([{id: 1}]);
+			--pendingAddNodeCalls;
+			if (pendingAddNodeCalls == 0) {
+				finished(tr);
+			}
+		}
+	};
+
+	var pendingAddNodeCalls = nodes.length;
 	for (var i = 0; i < nodes.length; i++) {
 		tr.addNode(new Node(nodes[i]));
 	}
-	return tr;
 };
 
 describe("Background page", function() {
 
-	beforeEach(function () {
+	beforeEach(function (done) {
+		// Workaround for bug involving the chrome.tabs.query api loading after I 
+		// had just stubbed it out. This just makes sure it's loaded before
+		// continuing to stub it out and proceed with testing.
+		chrome.tabs.query({active: true, currentWindow: true},
+			function (tabs) {
+				done();
+			});
 	});
 		
 	describe("Tree class", function() {
+		var tr;
 
-		beforeEach(function () {
-			tr = buildTestTree();	// defined in background.js
+		beforeEach(function (done) {
+			function finished(completeTr) {
+				tr = completeTr;
+				done();
+			}
+			buildTestTree(finished);
 		});
 
 		it("should have correct size", function() {
@@ -88,18 +112,21 @@ describe("Background page", function() {
 			};
 			expect(height(tr.root)).toEqual(5);
 		});
-
 	});
 
 	describe("Node class", function() {
 		
-		beforeEach(function () {
-			tr = buildTestTree();
+		beforeEach(function (done) {
+			function finished (completeTr) {
+				tr = completeTr;
+				done();
+			}
+			buildTestTree(finished);
 		});
 
 		it("should keep track of most recently visited node ", function() {
 			var node = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-			expect(tr.currentNode).toBe(node);
+			expect(tr.currentNode[224].url).toBe(node.url);
 		});
 
 		it("should know if it's a youngest or oldest child", function() {

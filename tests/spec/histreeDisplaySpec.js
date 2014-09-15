@@ -1,8 +1,13 @@
 
 describe("Popup window", function() {
+	var tr;
 
-	beforeEach(function() {
-		tr = buildTestTree();
+	beforeEach(function(done) {
+		function finished (completeTr) {
+			tr = completeTr;
+			done();
+		}
+		buildTestTree(finished);
 	});
 
 	describe("HistreeDisplay class", function() {
