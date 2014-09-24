@@ -1,6 +1,5 @@
 // Histree Google Chrome Extension
-// Javascript functions for parsing histree data structure and displaying in
-// popup window.
+// Class to traverse Tree data structure in proper order to be displayed in popup
 // Chip Jackson, September 2014
 
 //------------------------------------------------------------------------------

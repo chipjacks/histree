@@ -15,6 +15,7 @@ var brown = "#AD855C";
 var CHILD_COLOR = "#11CAF0";
 var SIBLING_COLOR = "#3FD657";
 var PARENT_COLOR = "#FF5F58";
+var CURRENT_NODE_COLOR = "#FF5F58";
 
 //------------------------------------------------------------------------------
 // Methods to build HTML list of histree links in popup
@@ -28,14 +29,11 @@ function displayHistree(node) {
 	var hd = new HistreeDisplay(startNode);
 	var node = hd.curNode;
 	displayNode(node, hd.getIndent());
-	var count = 0;
 	while (node = hd.next()) {
 		displayNode(node, hd.getIndent());
-		count += 1;
-		//if (count > 10) break;
 	}
-
 	drawTree();
+	document.dispatchEvent(popupLoadComplete);
 }
 
 function displayNode(node, indent) {
@@ -72,6 +70,9 @@ function displayNode(node, indent) {
 	li.style.cursor = "pointer";
 
 	li.style.backgroundImage = "url(chrome://favicon/" + node.url + ")";
+	if (node.url == 'chrome://newtab/') {
+		li.style.backgroundImage = "url(assets/new_tab_icon.png)";
+	}
 
 	title.className = "title";
 	domain.className = "domain";
@@ -82,8 +83,11 @@ function displayNode(node, indent) {
 
 	// Setup event callbacks
 	li.onclick = function () {
-		chrome.tabs.update(node.tabId, {url: node.url});
-		// eventPage.updateNode(.url, Date.now);
+		chrome.tabs.update(node.tabId, {url: node.url}, function() {
+			if (chrome.runtime.lastError) {
+				chrome.tabs.create({url: node.url});
+			}
+		});
 	}
 	li.onmouseover = function () {
 		var host = node.url;
@@ -92,14 +96,14 @@ function displayNode(node, indent) {
 		lastvisit.innerHTML = lastVisitToString(node.time);
 		colorBranch(li, green);
 		colorPoint(li, green);
-		highlightRelatives(node);
+		//highlightRelatives(node);
 	}
 	li.onmouseout = function () {
 		colorBranch(li, brown);
 		colorPoint(li, brown);
 		domain.innerHTML = "";
 		lastvisit.innerHTML = "";
-		unhighlightRelatives(node);
+		//unhighlightRelatives(node);
 	}
 
 	title.appendChild(a);
@@ -107,6 +111,7 @@ function displayNode(node, indent) {
 	li.appendChild(lastvisit);
 	li.appendChild(domain);
 	visitList.appendChild(li);
+	li.coords = {x: parseInt(li.style.marginLeft) - 8, y: li.offsetTop + 11};
 }
 
 function highlightRelatives(node) {
@@ -177,23 +182,27 @@ function lastVisitToString(lv) {
 //------------------------------------------------------------------------------
 // Methods to draw tree branches and leaves using SVG
 
+var svg;
+
 // Functions for drawing the SVG lines and points linking histree nodes
 function drawTree() {
 	var list = document.getElementById('visit-list');
+	svg = document.createDocumentFragment();
 	var entries = list.children;
 	for (var i = 1; i < entries.length; i++) {
 		drawBranch(entries[i], brown);
 	}
+	document.getElementById('link-svg').innerHTML = svg.innerHTML;
 }
 
 function drawBranch(toLi, color) {
-	console.info("drawing branch %s", toLi.id);
+	//console.info("drawing branch %s", toLi.id);
 	var parent = document.getElementById(toLi.getAttribute("parentId"));
 	var id = toLi.id;
 	if (parent) {
-		drawLine(getCoords(parent), getCoords(toLi), color, id);
+		drawLine(parent.coords, toLi.coords, color, id);
 	}
-	drawPoint(getCoords(toLi), id);
+	drawPoint(toLi.coords, id);
 }
 
 function colorBranch(toLi, color) {
@@ -203,11 +212,10 @@ function colorBranch(toLi, color) {
 		colorLine(id, color);
 		colorBranch(parent, color);
 	}
-	colorPoint(toLi, brown);
+	colorPoint(toLi);
 }
 
 function drawLine(a, b, color, id) {
-	var svg = document.getElementById('link-svg'); //TODO: make static
 	var line = '<polyline id="' + id + 
 		'line" points="' + a.x + ',' + a.y + ' ' + a.x + ',' + (b.y + 12) + 
 		' ' + a.x + ',' + (b.y + 12) + ' ' + b.x + ',' + b.y + '" ' +
@@ -224,7 +232,6 @@ function colorLine(id, color) {
 }
 
 function drawPoint(a, id) {
-	var svg = document.getElementById('link-svg'); //TODO: make static
 	var circle = '<circle id="' + id + 'point" cx="' + a.x + '" cy="' + a.y +
 		'" r="4" stroke="' + brown + '" fill="' + brown + '" />';
 	svg.innerHTML += circle;
@@ -234,13 +241,11 @@ function colorPoint(li, color) {
 	var point = document.getElementById(li.id + "point");
 	var parent = point.parentNode;
 	parent.removeChild(point);
-	point.style.stroke = color;
-	point.style.fill = color;
+	if (color) {
+		point.style.stroke = color;
+		point.style.fill = color;
+	}
 	parent.appendChild(point);
-}
-
-function getCoords(li) {
-	return {x: parseInt(li.style.marginLeft) - 8, y: li.offsetTop + 11};
 }
 
 function selectNode(node) {
@@ -248,53 +253,50 @@ function selectNode(node) {
 		return;
 	}
 	var li = document.getElementById("li" + node.id);
-	li.scrollIntoView();
+	// TODO: fix intermittent scrollTo bug.
+	li.scrollIntoView(true);
+	console.log("scrollTop: %i, offsetTop: %i", document.body.scrollTop, li.offsetTop);
+	colorPoint(li, CURRENT_NODE_COLOR);
+	li.onmouseover = function () {};
+	li.onmouseout = function () {};
 }
+
+function resetTree() {
+		chrome.runtime.getBackgroundPage(
+			function (bgPage) {
+				bgPage.histree.reset();
+				location.reload(true);
+			});
+};
+
+var popupLoadComplete = new Event('popupLoadComplete');
 
 document.addEventListener('DOMContentLoaded',
 	function () {
 		chrome.runtime.getBackgroundPage(
 			function (bgPage) {
-				if (typeof TESTING != "undefined" && TESTING == true) {
-					// displayHistree(bgPage.buildTestTree());
-					return;
-				}
 				var histree = bgPage.histree;
-				if (!histree) {
-					console.error("No histree found for tab %d", tab.id);
+				if (typeof histree == 'undefined' || histree.root == null) {
+					var div = document.getElementById('inner-div');
+					var img = document.createElement('img');
+					img.src = 'assets/histree_full_logo.png';
+					div.appendChild(img);
+					div.className = "empty-tree";
+					document.getElementById('reset-link').innerHTML = '';
 					return;
 				}
+				document.addEventListener('popupLoadComplete', function() {
+					console.log("popup loaded");
+					chrome.tabs.query({active: true, currentWindow: true},
+						function (tabs) {
+							if (tabs.length > 1) {
+								console.error("chrome.tabs.query returned more than 1 active tab.");
+							}
+							var tab = tabs[0];
+							selectNode(histree.currentNode[tab.id]);
+						});
+				});
 				displayHistree(histree.root);
-
-				chrome.tabs.query({active: true, currentWindow: true},
-					function (tabs) {
-						if (tabs.length > 1) {
-							console.error("chrome.tabs.query returned more than 1 active tab.");
-						}
-						var tab = tabs[0];
-						setTimeout(function() {selectNode(histree.currentNode[tab.id]);}, 100);
-					});
+				document.getElementById('reset-link').onclick = resetTree;
 			});
 	});
-
-document.addEventListener('load',
-	function () {
-		chrome.runtime.getBackgroundPage(
-			function (bgPage) {
-				var histree = bgPage.histree;
-				if (!histree) {
-					console.error("No histree found for tab %d", tab.id);
-					return;
-				}
-
-				chrome.tabs.query({active: true, currentWindow: true},
-					function (tabs) {
-						if (tabs.length > 1) {
-							console.error("chrome.tabs.query returned more than 1 active tab.");
-						}
-						var tab = tabs[0];
-						selectNode(histree.currentNode[tab.id]);
-					});
-			});
-	});
-

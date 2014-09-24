@@ -1,91 +1,90 @@
+// Histree Google Chrome Extension
+// HistreeDisplay class unit tests
+// Chip Jackson, September 2014
 
-describe("Popup window", function() {
+describe("HistreeDisplay class", function() {
 	var tr;
+	var hd;
 
-	beforeEach(function(done) {
-		function finished (completeTr) {
-			tr = completeTr;
-			done();
-		}
-		buildTestTree(finished);
+	beforeEach(function() {
+		spyOn(chrome.tabs, 'query').and.callFake(function(blah, callback) {
+			callback([{id: 1}]);
+		});
+		buildTestTree(function (completeTr) { tr = completeTr; });
 	});
 
-	describe("HistreeDisplay class", function() {
+	describe("next method", function() {
 
 		beforeEach(function() {
 			hd = new HistreeDisplay(tr.currentNode);
 		});
 
-		describe("next method", function() {
-
-			it("should traverse from an oldest child to a parent", function() {
-				var oldChild = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
-				expect(oldChild.isOldestChild()).toBe(true);
-				var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-				hd.jumpTo(oldChild);
-				expect(hd.next()).toBe(parent);
-			});
-
-			it("should traverse from a not oldest child to a older sibling", function() {
-				var youngSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-				expect(youngSibling.isOldestChild()).toBe(false);
-				var olderSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
-				hd.jumpTo(youngSibling);
-				expect(hd.next()).toBe(olderSibling);
-			});
-
-			it("should increase indent when traversing from a youngest child to an older sibling", function() {
-				var youngSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-				expect(youngSibling.isOldestChild()).toBe(false);
-				expect(youngSibling.isYoungestChild()).toBe(true);
-				var olderSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
-				hd.jumpTo(youngSibling);
-				var prevIndent = hd.curNode.indent;
-				hd.next();
-				expect(hd.curNode.indent).toEqual(prevIndent + 1);
-				expect
-			});
-
-			it("should traverse from a sibling to an older siblings youngest child if the older sibling has children", function() {
-				var youngSibling = tr.urls["file:///Users/chipjacks/Applications/"];
-				var nephew = tr.urls["file:///Users/chipjacks/Dropbox/books/"];
-				hd.jumpTo(youngSibling);
-				expect(hd.next()).toBe(nephew);
-			});
-
-			it("should increase indent when traversing from a sibling to an older siblings youngest child", function() {
-				var youngSibling = tr.urls["file:///Users/chipjacks/Applications/"];
-				var nephew = tr.urls["file:///Users/chipjacks/Dropbox/books/"];
-				hd.jumpTo(youngSibling);
-				var prevIndent = hd.curNode.indent;
-				hd.next();
-				expect(hd.curNode.indent).toEqual(prevIndent + 1);
-				expect(hd.curNode.indent).toBeTruthy();
-			});
-
-			it("should return null eventually", function() {
-				var node = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-				hd.jumpTo(node);
-				for (var i = 0; i < 50; i++) {
-					hd.next();
-				}
-				expect(hd.next()).toBe(null);
-			});
+		it("should traverse from an oldest child to a parent", function() {
+			var oldChild = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
+			expect(oldChild.isOldestChild()).toBe(true);
+			var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+			hd.jumpTo(oldChild);
+			expect(hd.next()).toBe(parent);
 		});
 
-		xdescribe("prev method", function() {
-
-			it("should undo the next method", function() {
-				var node = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-				var last = node;
-				hd.jumpTo(node);
-				while (hd.next()) {
- 					expect(hd.prev()).toBe(last);
- 					last = hd.next();
- 				}
-			});
+		it("should traverse from a not oldest child to a older sibling", function() {
+			var youngSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+			expect(youngSibling.isOldestChild()).toBe(false);
+			var olderSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
+			hd.jumpTo(youngSibling);
+			expect(hd.next()).toBe(olderSibling);
 		});
-	
+
+		it("should increase indent when traversing from a youngest child to an older sibling", function() {
+			var youngSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+			expect(youngSibling.isOldestChild()).toBe(false);
+			expect(youngSibling.isYoungestChild()).toBe(true);
+			var olderSibling = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
+			hd.jumpTo(youngSibling);
+			var prevIndent = hd.curNode.indent;
+			hd.next();
+			expect(hd.curNode.indent).toEqual(prevIndent + 1);
+			expect
+		});
+
+		it("should traverse from a sibling to an older siblings youngest child if the older sibling has children", function() {
+			var youngSibling = tr.urls["file:///Users/chipjacks/Applications/"];
+			var nephew = tr.urls["file:///Users/chipjacks/Dropbox/books/"];
+			hd.jumpTo(youngSibling);
+			expect(hd.next()).toBe(nephew);
+		});
+
+		it("should increase indent when traversing from a sibling to an older siblings youngest child", function() {
+			var youngSibling = tr.urls["file:///Users/chipjacks/Applications/"];
+			var nephew = tr.urls["file:///Users/chipjacks/Dropbox/books/"];
+			hd.jumpTo(youngSibling);
+			var prevIndent = hd.curNode.indent;
+			hd.next();
+			expect(hd.curNode.indent).toEqual(prevIndent + 1);
+			expect(hd.curNode.indent).toBeTruthy();
+		});
+
+		it("should return null eventually", function() {
+			var node = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+			hd.jumpTo(node);
+			for (var i = 0; i < 50; i++) {
+				hd.next();
+			}
+			expect(hd.next()).toBe(null);
+		});
+	});
+
+	xdescribe("prev method", function() {
+
+		it("should undo the next method", function() {
+			var node = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+			var last = node;
+			hd.jumpTo(node);
+			while (hd.next()) {
+				expect(hd.prev()).toBe(last);
+				last = hd.next();
+			}
+		});
 	});
 
 	xdescribe("tree drawing routine", function() {
@@ -101,7 +100,5 @@ describe("Popup window", function() {
 				expect(window.displayNode).toHaveBeenCalledWith(tr.urls[nodes[i]["url"]]);
 			}
 		});
-
 	});
-
 });

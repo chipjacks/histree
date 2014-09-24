@@ -1,5 +1,7 @@
 // Histree Google Chrome Extension
-// Javascript functions for recording page visits in tree data structure
+// Tree data structure with smart insertion of new nodes by first checking if
+// they are already in the tree, and if not locating their parent in the tree
+// and inserting them as a child.
 // Chip Jackson, July 2014
 
 "use strict";
@@ -17,7 +19,7 @@ function Tree() {
 
 Tree.prototype.addNode = function (node) {
 // appends node as child of Tree.currentNode, points Tree.currentNode to node.
-	//console.info("Tree.prototype.addNode called with: ", JSON.stringify(node));
+	console.info("Tree.prototype.addNode called with: ", JSON.stringify(node));
 	var thisTree = this; // make an alias so object is accessible within chrome.tabs.query callback
 
 	// lookup tabid
@@ -69,7 +71,8 @@ Tree.prototype.addNode = function (node) {
 					node.parent = thisTree.currentNode[lastActiveTabId];
 				}
 				if (!node.parent) {
-					throw new Error("Couldn't find a parent!");
+					console.error("Couldn't find a parent!");
+					// throw new Error("Couldn't find a parent!");
 					// let's see about just using the youngestChild as the parent
 				}
 				node.parent.children.push(node);
@@ -89,6 +92,13 @@ Tree.prototype.addNode = function (node) {
 			}
 		});
 };
+
+Tree.prototype.reset = function() {
+	this.root = null;
+	this.currentNode = {};
+	this.urls = {};
+	this.youngestNode = null;
+}
 
 //------------------------------------------------------------------------------
 // Node class methods

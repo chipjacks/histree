@@ -9,6 +9,7 @@ body {
 }
 #inner-div {
 	height: 100%;
+	clear: both;
 }
 #link-div {
 	height: 100%;
@@ -66,4 +67,17 @@ li.entry:hover {
 	line-height: 12px;
 	color: rgb(151, 156, 160);
 	font-size: 82%;
+}
+.empty-tree {
+	text-align: center;
+	font-size: 20px;
+}
+.empty-tree img {
+	width: 200px;
+	padding-bottom: 10px;
+}
+#reset-link {
+	float: right;
+	padding-right: 5px;
+	color: grey;
 }

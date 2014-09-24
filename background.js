@@ -1,6 +1,6 @@
 // Histree Google Chrome Extension
-// Javascript functions for recording page visits in tree data structure
-// Chip Jackson, July 2014
+// Javascript functions for recording page visits in tree data structure.
+// Chip Jackson, September 2014
 
 "use strict";
 
@@ -8,7 +8,6 @@
 // GLOBALS
 var histree = new Tree();	// inidividual tab histrees, keyed by tabId
 var lastVisit = null;			// stores last visited page for each tab
-var THUMBNAILS = false;
 var lastActiveTabId = 0;
 var activeTabId = 0;
 
@@ -47,17 +46,11 @@ function onHistoryItemVisited(histItem) {
 	if (lastVisit && lastVisit.url === histItem.url &&
 			lastVisit.tabUpdate) {
 		// onTabUpdated already picked it up, add it to the tree
-		if (THUMBNAILS && !lastVisit[tab.id].img) {
-			// still need to capture a thumbnail for it, let pendingCaptures
-			// callback add it to the tree
-			lastVisit.historyVisit = true;
-		} else {
-			lv = lastVisit;
-			if (histItem.title) {
-				lv.title = histItem.title;
-			}
-			histree.addNode(lv);
+		lv = lastVisit;
+		if (histItem.title) {
+			lv.title = histItem.title;
 		}
+		histree.addNode(lv);
 	} else {
 		// add some info, let onTabUpdated add it to the tree
 		lastVisit = new Node({url: histItem.url, title: histItem.title,
@@ -70,21 +63,6 @@ function onTabUpdated(tabId, changeInfo, tab) {
 	console.info("Tab updated: tabId = %d, tab = %o, changeInfo = %o", tabId, tab,
 		changeInfo);
 
-	if (THUMBNAILS) {
-		if (changeInfo.status === 'loading' && tab.active &&
-				pendingCaptures[tab.id]) {
-			// tab is changing pages, try and capture last page if we haven't already
-			pendingCaptures[tab.id].call();
-			pendingCaptures[tab.id] = void(0);
-		} else if (changeInfo.status === 'complete' && tab.active) {
-			// try and capture tab after a half second to let page content finish 
-			// loading
-			setTimeout(function () {
-				pendingCaptures[tab.id].call();
-				pendingCaptures[tab.id] = void(0);
-			}, 500);
-		}
-	}
 	if (changeInfo.status === 'complete') {
 		var lv;
 		if (tab.title.match(newTabRegex)) {
@@ -100,29 +78,11 @@ function onTabUpdated(tabId, changeInfo, tab) {
 			}
 			lv.tabId= tab.id;
 			histree.addNode(lv);
-			if (THUMBNAILS) {
-				pendingCaptures[tab.id] = function () {
-					chrome.tabs.captureVisibleTab(function (dataUrl) {
-						lv.img = dataUrl;
-						addToHistree(tab.id, lv);
-					});
-				};
-			}
 		} else {
 			// add some info, let onHistoryItemVisit add it to tree
 			lastVisit = new Node({url: tab.url, title: tab.title,
 				time: Date.now(), tabId: tab.id, tabUpdate: true});
 			lv = lastVisit;
-			if (THUMBNAILS) {
-				pendingCaptures[tab.id] = function () {
-					chrome.tabs.captureVisibleTab(function (dataUrl) {
-						lv.img = dataUrl;
-						if (lv.historyVisit) {
-							addToHistree(tab.id, lv);
-						}
-					});
-				};
-			}
 		}
 	}
 }

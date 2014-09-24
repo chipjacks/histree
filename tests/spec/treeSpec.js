@@ -1,9 +1,7 @@
 // Histree Google Chrome Extension
-// Background page tests
-// Chip Jackson, July 2014
+// Tree class unit tests
+// Chip Jackson, September 2014
 
-//------------------------------------------------------------------------------
-// Testing/utility functions
 var nodes = [
 	{"url":"file:///","title":"Index of /","time":1405450159217,"tabId":224,"tabUpdate":true,"children":[]},
 	{"url":"file:///Users/","title":"Index of /Users/","time":1405450169747,"tabId":224,"tabUpdate":true,"children":[]},
@@ -38,161 +36,133 @@ var nodes = [
 	{"url":"file:///Users/chipjacks/Applications/Contents/","title":"Index of /Users/chipjacks/Applications/Contents/","time":1405450410416,"tabId":224,"tabUpdate":true,"children":[]}
 ];
 
-function buildTestTree(finished) {
+function buildTestTree(callback) {
 	var tr = new Tree();
-	if (document.readyState != "complete") {
-		throw "Document not loaded";
-	}
 
-	chrome.tabs = {
-		query: function(blah, callback) {
-			callback([{id: 1}]);
-			--pendingAddNodeCalls;
-			if (pendingAddNodeCalls == 0) {
-				finished(tr);
-			}
-		}
-	};
-
-	var pendingAddNodeCalls = nodes.length;
 	for (var i = 0; i < nodes.length; i++) {
 		tr.addNode(new Node(nodes[i]));
 	}
+	callback(tr);
 };
 
-describe("Background page", function() {
+describe("Tree class", function() {
+	var tr;
 
-	beforeEach(function (done) {
-		// Workaround for bug involving the chrome.tabs.query api loading after I 
-		// had just stubbed it out. This just makes sure it's loaded before
-		// continuing to stub it out and proceed with testing.
-		chrome.tabs.query({active: true, currentWindow: true},
-			function (tabs) {
-				done();
-			});
+	beforeEach(function () {
+		spyOn(chrome.tabs, 'query').and.callFake(function(blah, callback) {
+			callback([{id: 1}]);
+		});
+		buildTestTree(function (completeTr) { tr = completeTr; });
 	});
-		
-	describe("Tree class", function() {
-		var tr;
 
-		beforeEach(function (done) {
-			function finished(completeTr) {
-				tr = completeTr;
-				done();
-			}
-			buildTestTree(finished);
-		});
+	it("should have correct size", function() {
+		expect(Object.keys(tr.urls).length).toEqual(17);
+		expect(nextNodeId.i).toEqual(17);
+	});
 
-		it("should have correct size", function() {
-			expect(Object.keys(tr.urls).length).toEqual(17);
-			expect(nextNodeId.i).toEqual(17);
-		});
+	it("should contain all inserted urls", function() {
+		for (var i = 0; i < nodes.length; i++) {
+			expect(tr.urls[nodes[i]["url"]]).not.toBe(undefined);
+		}
+		expect(tr.urls["sharks.com"]).toBe(undefined);
+	});
 
-		it("should contain all inserted urls", function() {
-			for (var i = 0; i < nodes.length; i++) {
-				expect(tr.urls[nodes[i]["url"]]).not.toBe(undefined);
-			}
-			expect(tr.urls["sharks.com"]).toBe(undefined);
-		});
-
-		it("should have correct height", function() {
-			height = function (node) {
-				if (!node.children || !node.children.length) {
-					return 0;
-				} else {
-					var max = 0;
-					for (var i = 0; i < node.children.length; i++) {
-						var h = height(node.children[i]);
-						if (h > max) {
-							max = h;
-						}
+	it("should have correct height", function() {
+		height = function (node) {
+			if (!node.children || !node.children.length) {
+				return 0;
+			} else {
+				var max = 0;
+				for (var i = 0; i < node.children.length; i++) {
+					var h = height(node.children[i]);
+					if (h > max) {
+						max = h;
 					}
-					return max + 1;
 				}
-			};
-			expect(height(tr.root)).toEqual(5);
+				return max + 1;
+			}
+		};
+		expect(height(tr.root)).toEqual(5);
+	});
+});
+
+describe("Node class", function() {
+
+	beforeEach(function () {
+		spyOn(chrome.tabs, 'query').and.callFake(function(blah, callback) {
+			callback([{id: 1}]);
 		});
+		buildTestTree(function (completeTr) { tr = completeTr; });
 	});
 
-	describe("Node class", function() {
-		
-		beforeEach(function (done) {
-			function finished (completeTr) {
-				tr = completeTr;
-				done();
-			}
-			buildTestTree(finished);
-		});
+	it("should keep track of most recently visited node ", function() {
+		var node = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+		expect(tr.currentNode[224].url).toBe(node.url);
+	});
 
-		it("should keep track of most recently visited node ", function() {
-			var node = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-			expect(tr.currentNode[224].url).toBe(node.url);
-		});
+	it("should know if it's a youngest or oldest child", function() {
+		var node = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+		expect(node.isYoungestChild()).toBe(true);
+		expect(node.isOldestChild()).toBe(false);
 
-		it("should know if it's a youngest or oldest child", function() {
-			var node = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-			expect(node.isYoungestChild()).toBe(true);
-			expect(node.isOldestChild()).toBe(false);
+		node = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
+		expect(node.isYoungestChild()).toBe(false);
+		expect(node.isOldestChild()).toBe(false);
 
-			node = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
-			expect(node.isYoungestChild()).toBe(false);
-			expect(node.isOldestChild()).toBe(false);
+		node = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
+		expect(node.isYoungestChild()).toBe(false);
+		expect(node.isOldestChild()).toBe(true);
 
-			node = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
-			expect(node.isYoungestChild()).toBe(false);
-			expect(node.isOldestChild()).toBe(true);
+		node = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+		expect(node.isYoungestChild()).toBe(true);
+		expect(node.isOldestChild()).toBe(false);
 
-			node = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-			expect(node.isYoungestChild()).toBe(true);
-			expect(node.isOldestChild()).toBe(false);
+		node = tr.urls["file:///Users/chipjacks/Applications/"];
+		expect(node.isYoungestChild()).toBe(true);
+		expect(node.isOldestChild()).toBe(false);
+	});
 
-			node = tr.urls["file:///Users/chipjacks/Applications/"];
-			expect(node.isYoungestChild()).toBe(true);
-			expect(node.isOldestChild()).toBe(false);
-		});
+	it("should know who its big and little brothers are", function() {
+		var lil = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+		var big = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
+		expect(lil.bigBro()).toBe(big);
+		expect(big.lilBro()).toBe(lil);
+	});
 
-		it("should know who its big and little brothers are", function() {
-			var lil = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-			var big = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
-			expect(lil.bigBro()).toBe(big);
-			expect(big.lilBro()).toBe(lil);
-		});
+	it("should know who its parent is", function() {
+		var child = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+		var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+		expect(child.parent).toBe(parent);
+	});
 
-		it("should know who its parent is", function() {
-			var child = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-			var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-			expect(child.parent).toBe(parent);
-		});
+	it("should know who its children are", function() {
+		var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+		var child = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+		expect(parent.children).toContain(child);
+		child = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
+		expect(parent.children).toContain(child);
+		child = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
+		expect(parent.children).toContain(child);
+	});
 
-		it("should know who its children are", function() {
-			var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-			var child = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-			expect(parent.children).toContain(child);
-			child = tr.urls["file:///Users/chipjacks/Applications/Contents/Frameworks/"];
-			expect(parent.children).toContain(child);
-			child = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
-			expect(parent.children).toContain(child);
-		});
+	it("should know who its youngest child is", function() {
+		var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+		var child = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
+		expect(parent.youngestChild()).toBe(child);
+		expect(child.youngestChild()).toBe(null);
+		child = parent;
+		parent = tr.urls["file:///Users/chipjacks/Applications/"];
+		expect(parent.youngestChild()).toBe(child);
+	});
 
-		it("should know who its youngest child is", function() {
-			var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-			var child = tr.urls["file:///Users/chipjacks/Applications/Contents/Resources/"];
-			expect(parent.youngestChild()).toBe(child);
-			expect(child.youngestChild()).toBe(null);
-			child = parent;
-			parent = tr.urls["file:///Users/chipjacks/Applications/"];
-			expect(parent.youngestChild()).toBe(child);
-		});
-
-		it("should know who its oldest child is", function() {
-			var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
-			var child = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
-			expect(parent.oldestChild()).toBe(child);
-			expect(child.oldestChild()).toBe(null);
-			child = tr.urls["file:///Users/chipjacks/Applications/Counter-Strike%20Condition%20Zero.app/"];
-			parent = tr.urls["file:///Users/chipjacks/Applications/"];
-			expect(parent.oldestChild()).toBe(child);
-		});
+	it("should know who its oldest child is", function() {
+		var parent = tr.urls["file:///Users/chipjacks/Applications/Contents/"];
+		var child = tr.urls["file:///Users/chipjacks/Applications/Contents/MacOS/"];
+		expect(parent.oldestChild()).toBe(child);
+		expect(child.oldestChild()).toBe(null);
+		child = tr.urls["file:///Users/chipjacks/Applications/Counter-Strike%20Condition%20Zero.app/"];
+		parent = tr.urls["file:///Users/chipjacks/Applications/"];
+		expect(parent.oldestChild()).toBe(child);
 	});
 });
 
