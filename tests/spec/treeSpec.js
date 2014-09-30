@@ -37,13 +37,13 @@ var nodes = [
 ];
 
 function buildTestTree(callback) {
-	var tr = new Tree();
+	var tr = new Tree.Tree();
 
 	for (var i = 0; i < nodes.length; i++) {
-		tr.addNode(new Node(nodes[i]));
+		tr.addNode(new Tree.Node(nodes[i]));
 	}
 	callback(tr);
-};
+}
 
 describe("Tree class", function() {
 	var tr;
@@ -57,12 +57,11 @@ describe("Tree class", function() {
 
 	it("should have correct size", function() {
 		expect(Object.keys(tr.urls).length).toEqual(17);
-		expect(nextNodeId.i).toEqual(17);
 	});
 
 	it("should contain all inserted urls", function() {
 		for (var i = 0; i < nodes.length; i++) {
-			expect(tr.urls[nodes[i]["url"]]).not.toBe(undefined);
+			expect(tr.urls[nodes[i].url]).not.toBe(undefined);
 		}
 		expect(tr.urls["sharks.com"]).toBe(undefined);
 	});

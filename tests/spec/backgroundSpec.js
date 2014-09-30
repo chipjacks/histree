@@ -54,7 +54,7 @@ describe("Background page", function() {
 
 	beforeEach(function(done) {
 		originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 15000;
 
 		chrome.runtime.getBackgroundPage(function (backgroundPage) {
 			bgPage = backgroundPage;
@@ -70,7 +70,7 @@ describe("Background page", function() {
 				chrome.tabs.update(testTab.id, {url: urls[i++]},
 						i == urls.length ? done : function(tab){});
 			}
-		};
+		}
 		chrome.tabs.create({}, function(tab) {testTab = tab;});
 	});
 
@@ -84,11 +84,12 @@ describe("Background page", function() {
 	});
 
 	it("should record new page visits", function() {
-		expect(histree.root).not.toBe(null)
+		expect(histree.root).not.toBe(null);
 		expect(histree.currentNode[testTab.id].url).toContain("file:///Users/chipjacks/Applications/Contents/");
 	});
 
 	it("should track the last active tab", function() {
-		expect(bgPage.activeTabId).toEqual(testTab.id);
+		chrome.tabs.remove(testTab.id);
+		expect(bgPage.lastActiveTabId).toEqual(testTab.id);
 	});
 });
