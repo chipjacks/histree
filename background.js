@@ -4,16 +4,17 @@
 
 var histree;
 var lastActiveTabId;
+var Tree;
 
-(function() {
+(function () {
 	"use strict";
 
 	//------------------------------------------------------------------------------
-	// GLOBALS
-	histree = new Tree.Tree();	// inidividual tab histrees, keyed by tabId
+	histree = new Tree.Tree();
 	lastActiveTabId = 0;
-	var lastVisit = null;			// stores last visited page for each tab
-	var activeTabId = 0;
+	// stores last visited page for each tab
+	var lastVisit = null,
+		activeTabId = 0;
 
 	function init() {
 		// Called when extension is installed or upgraded
@@ -48,17 +49,17 @@ var lastActiveTabId;
 		var lv;
 		if (lastVisit && lastVisit.url === histItem.url &&
 				lastVisit.tabUpdate) {
-					// onTabUpdated already picked it up, add it to the tree
-					lv = lastVisit;
-					if (histItem.title) {
-						lv.title = histItem.title;
-					}
-					histree.addNode(lv);
-				} else {
-					// add some info, let onTabUpdated add it to the tree
-					lastVisit = new Tree.Node({url: histItem.url, title: histItem.title,
-						time: Date.now(), historyVisit: true});
-				}
+			// onTabUpdated already picked it up, add it to the tree
+			lv = lastVisit;
+			if (histItem.title) {
+				lv.title = histItem.title;
+			}
+			histree.addNode(lv);
+		} else {
+			// add some info, let onTabUpdated add it to the tree
+			lastVisit = new Tree.Node({url: histItem.url, title: histItem.title,
+				time: Date.now(), historyVisit: true});
+		}
 	}
 	chrome.history.onVisited.addListener(onHistoryItemVisited);
 
@@ -74,19 +75,19 @@ var lastActiveTabId;
 				histree.addNode(lv);
 			} else if (lastVisit && lastVisit.url === tab.url &&
 					lastVisit.historyVisit) {
-						// onHistoryItemVisit already picked it up, add it to tree
-						lv = lastVisit;
-						if (tab.title) {
-							lv.title = tab.title;
-						}
-						lv.tabId= tab.id;
-						histree.addNode(lv);
-					} else {
-						// add some info, let onHistoryItemVisit add it to tree
-						lastVisit = new Tree.Node({url: tab.url, title: tab.title,
-							time: Date.now(), tabId: tab.id, tabUpdate: true});
-						lv = lastVisit;
-					}
+				// onHistoryItemVisit already picked it up, add it to tree
+				lv = lastVisit;
+				if (tab.title) {
+					lv.title = tab.title;
+				}
+				lv.tabId = tab.id;
+				histree.addNode(lv);
+			} else {
+				// add some info, let onHistoryItemVisit add it to tree
+				lastVisit = new Tree.Node({url: tab.url, title: tab.title,
+					time: Date.now(), tabId: tab.id, tabUpdate: true});
+				lv = lastVisit;
+			}
 		}
 	}
 	chrome.tabs.onUpdated.addListener(onTabUpdated);

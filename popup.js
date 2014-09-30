@@ -3,6 +3,8 @@
 // popup window.
 // Chip Jackson, September 2014
 
+var HistreeDisplay;
+
 (function () {
 	"use strict";
 
@@ -26,11 +28,13 @@
 		while (startNode.children.length) {
 			startNode = startNode.children[startNode.children.length - 1];
 		}
-		var hd = new HistreeDisplay(startNode);
-		var node = hd.curNode;
+		var hd = new HistreeDisplay(startNode),
+			node = hd.curNode;
 		displayNode(node, hd.getIndent());
-		while (node = hd.next()) {
+		node = hd.next();
+		while (node) {
 			displayNode(node, hd.getIndent());
+			node = hd.next();
 		}
 		drawTree();
 		document.dispatchEvent(popupLoadComplete);
@@ -52,13 +56,12 @@
 		//     chrome.google.com
 		//   </div>
 		//</li>
-		var visitList = document.getElementById('visit-list');
-
-		var li = document.createElement('li');
-		var title = document.createElement('div');
-		var a = document.createElement('a');
-		var lastvisit = document.createElement('div');
-		var domain = document.createElement('div');
+		var visitList = document.getElementById('visit-list'),
+			li = document.createElement('li'),
+			title = document.createElement('div'),
+			a = document.createElement('a'),
+			lastvisit = document.createElement('div'),
+			domain = document.createElement('div');
 
 		li.className = "entry";
 		li.setAttribute("id", "li" + node.id);
@@ -70,7 +73,7 @@
 		li.style.cursor = "pointer";
 
 		li.style.backgroundImage = "url(chrome://favicon/" + node.url + ")";
-		if (node.url == 'chrome://newtab/') {
+		if (node.url === 'chrome://newtab/') {
 			li.style.backgroundImage = "url(assets/new_tab_icon.png)";
 		}
 
@@ -83,12 +86,12 @@
 
 		// Setup event callbacks
 		li.onclick = function () {
-			chrome.tabs.update(node.tabId, {url: node.url}, function() {
+			chrome.tabs.update(node.tabId, {url: node.url}, function () {
 				if (chrome.runtime.lastError) {
 					chrome.tabs.create({url: node.url});
 				}
 			});
-		}
+		};
 		li.onmouseover = function () {
 			var host = node.url;
 			domain.innerHTML = host;
@@ -97,14 +100,14 @@
 			colorBranch(li, green);
 			colorPoint(li, green);
 			//highlightRelatives(node);
-		}
+		};
 		li.onmouseout = function () {
 			colorBranch(li, brown);
 			colorPoint(li, brown);
 			domain.innerHTML = "";
 			lastvisit.innerHTML = "";
 			//unhighlightRelatives(node);
-		}
+		};
 
 		title.appendChild(a);
 		li.appendChild(title);
@@ -115,31 +118,33 @@
 	}
 
 	function highlightRelatives(node) {
-		for (var i = 0; i < node.children.length; i++) {
+		var i;
+		for (i = 0; i < node.children.length; i += 1) {
 			colorNode(node.children[i], CHILD_COLOR);
 		}
 		if (node.parent) {
 			colorNode(node.parent, PARENT_COLOR);
-			for (var i = 0; i < node.parent.children.length; i++) {
+			for (i = 0; i < node.parent.children.length; i += 1) {
 				colorNode(node.parent.children[i], SIBLING_COLOR);
 			}
 		}
 	}
 
 	function unhighlightRelatives(node) {
-		for (var i = 0; i < node.children.length; i++) {
+		var i;
+		for (i = 0; i < node.children.length; i += 1) {
 			colorNode(node.children[i], brown);
 		}
 		if (node.parent) {
 			colorNode(node.parent, brown);
-			for (var i = 0; i < node.parent.children.length; i++) {
+			for (i = 0; i < node.parent.children.length; i += 1) {
 				colorNode(node.parent.children[i], brown);
 			}
 		}
 	}
 
 	function colorNode(node, color) {
-		if (!node) return;
+		if (!node) { return; }
 		var li = document.getElementById("li" + node.id);
 		colorPoint(li, color);
 	}
@@ -148,34 +153,37 @@
 	// Utility Methods
 
 	function lastVisitToString(lv) {
-		var now = new Date();
-		var yesterday = new Date();
+		var now = new Date(),
+			yesterday = new Date(),
+			secs = (now.getTime() - lv) / 1000,
+			date = new Date(lv),
+			hours,
+			months;
+		
 		yesterday.setDate(now.getDate() - 1);
-		var secs = (now.getTime() - lv) / 1000;
-		var date = new Date(lv);
 		if (secs < 60) {
 			return "less then a min ago";
 		} else if (secs < 3600) {
 			return Math.round(secs / 60) + " min ago";
 		} else if (secs < 3600 * 12) {
-			var hours = Math.round(secs / 60 / 60);
-			if (hours == 1) {
+			hours = Math.round(secs / 60 / 60);
+			if (hours === 1) {
 				return "about an hour ago";
 			} else {
 				return hours + " hours ago";
 			}
-		} else if (secs < 3600 * 24 && date.getDay() == now.getDay()) {
+		} else if (secs < 3600 * 24 && date.getDay() === now.getDay()) {
 			// visit was earlier today
-			var hours = Math.round(secs / 60 / 60);
+			hours = Math.round(secs / 60 / 60);
 			return hours + " hours ago";
-		} else if (yesterday.toDateString() == now.toDateString()) {
+		} else if (yesterday.toDateString() === now.toDateString()) {
 			// visit was yesterday
 			return "yesterday at " + date.toTimeString();
 		} else {
-			var months = ['January', 'February', 'March', 'April', 'May', 'June',
-				'July', 'August', 'September', 'October', 'November', 'December']
-					// just print date and time of visit
-					return months[date.getMonth()] + " " + date.getDay();
+			months = ['January', 'February', 'March', 'April', 'May', 'June',
+				'July', 'August', 'September', 'October', 'November', 'December'];
+			// just print date and time of visit
+			return months[date.getMonth()] + " " + date.getDay();
 		}
 	}
 
@@ -186,10 +194,13 @@
 
 	// Functions for drawing the SVG lines and points linking histree nodes
 	function drawTree() {
-		var list = document.getElementById('visit-list');
+		var list = document.getElementById('visit-list'),
+			entries = list.children,
+			i;
+		
 		svg = document.createDocumentFragment();
-		var entries = list.children;
-		for (var i = 1; i < entries.length; i++) {
+		
+		for (i = 1; i < entries.length; i += 1) {
 			drawBranch(entries[i], brown);
 		}
 		document.getElementById('link-svg').innerHTML = svg.innerHTML;
@@ -197,8 +208,8 @@
 
 	function drawBranch(toLi, color) {
 		//console.info("drawing branch %s", toLi.id);
-		var parent = document.getElementById(toLi.getAttribute("parentId"));
-		var id = toLi.id;
+		var parent = document.getElementById(toLi.getAttribute("parentId")),
+			id = toLi.id;
 		if (parent) {
 			drawLine(parent.coords, toLi.coords, color, id);
 		}
@@ -206,8 +217,8 @@
 	}
 
 	function colorBranch(toLi, color) {
-		var parent = document.getElementById(toLi.getAttribute("parentId"));
-		var id = toLi.id;
+		var parent = document.getElementById(toLi.getAttribute("parentId")),
+			id = toLi.id;
 		if (parent) {
 			colorLine(id, color);
 			colorBranch(parent, color);
@@ -216,16 +227,16 @@
 	}
 
 	function drawLine(a, b, color, id) {
-		var line = '<polyline id="' + id + 
-			'line" points="' + a.x + ',' + a.y + ' ' + a.x + ',' + (b.y + 12) + 
+		var line = '<polyline id="' + id +
+			'line" points="' + a.x + ',' + a.y + ' ' + a.x + ',' + (b.y + 12) +
 			' ' + a.x + ',' + (b.y + 12) + ' ' + b.x + ',' + b.y + '" ' +
 			'style="fill: none; stroke: ' + color + '; stroke-width: 3;"/>';
 		svg.innerHTML += line;
 	}
 
 	function colorLine(id, color) {
-		var line = document.getElementById(id + 'line');
-		var parent = line.parentNode;
+		var line = document.getElementById(id + 'line'),
+			parent = line.parentNode;
 		parent.removeChild(line);
 		line.style.stroke = color;
 		parent.appendChild(line);
@@ -262,12 +273,12 @@
 	}
 
 	function resetTree() {
-			chrome.runtime.getBackgroundPage(
-				function (bgPage) {
-					bgPage.histree.reset();
-					location.reload(true);
-				});
-	};
+		chrome.runtime.getBackgroundPage(
+			function (bgPage) {
+				bgPage.histree.reset();
+				location.reload(true);
+			});
+	}
 
 	var popupLoadComplete = new Event('popupLoadComplete');
 
@@ -276,16 +287,16 @@
 			chrome.runtime.getBackgroundPage(
 				function (bgPage) {
 					var histree = bgPage.histree;
-					if (typeof histree == 'undefined' || histree.root == null) {
-						var div = document.getElementById('inner-div');
-						var img = document.createElement('img');
+					if (typeof histree === 'undefined' || histree.root === null) {
+						var div = document.getElementById('inner-div'),
+							img = document.createElement('img');
 						img.src = 'assets/histree_full_logo.png';
 						div.appendChild(img);
 						div.className = "empty-tree";
 						document.getElementById('reset-link').innerHTML = '';
 						return;
 					}
-					document.addEventListener('popupLoadComplete', function() {
+					document.addEventListener('popupLoadComplete', function () {
 						console.log("popup loaded");
 						chrome.tabs.query({active: true, currentWindow: true},
 							function (tabs) {

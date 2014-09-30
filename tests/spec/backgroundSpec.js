@@ -46,7 +46,7 @@ var urls2 = [
 	'http://seattle.craigslist.org/'
 ];
 
-describe("Background page", function() {
+xdescribe("Background page", function() {
 	var testTab;
 	var originalTimeout;
 	var histree;
