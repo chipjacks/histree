@@ -263,13 +263,19 @@ var HistreeDisplay;
 		if (!node) {
 			return;
 		}
+		function addToFunc(prevFunc, addedFunc) {
+			return function () {
+				prevFunc();
+				addedFunc();
+			};
+		}
 		var li = document.getElementById("li" + node.id);
 		// TODO: fix intermittent scrollTo bug.
 		li.scrollIntoView(true);
 		console.log("scrollTop: %i, offsetTop: %i", document.body.scrollTop, li.offsetTop);
 		colorPoint(li, CURRENT_NODE_COLOR);
-		li.onmouseover = function () {};
-		li.onmouseout = function () {};
+		li.onmouseover = addToFunc(li.onmouseover, function() {colorPoint(li, CURRENT_NODE_COLOR);});
+		li.onmouseout = addToFunc(li.onmouseout, function() {colorPoint(li, CURRENT_NODE_COLOR);});
 	}
 
 	function resetTree() {
