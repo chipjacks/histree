@@ -21,80 +21,64 @@ var Tree = (function () {
 		this.youngestNode = null;
 	}
 
+	// appends node as child of Tree.currentNode, points Tree.currentNode to node.
 	Tree.prototype.addNode = function (node) {
-		// appends node as child of Tree.currentNode, points Tree.currentNode to node.
 		console.info("Tree.prototype.addNode called with: ", JSON.stringify(node));
 		// make an alias so object is accessible within chrome.tabs.query callback
 		var thisTree = this;
-		// lookup tabid
-		chrome.tabs.query({active: true, currentWindow: true},
-			function (tabs) {
-				if (tabs.length > 1) {
-					console.error("chrome.tabs.query returned more than 1 active tab.");
+
+		// see if the url is already in the tree
+		var oldNode = thisTree.urls[node.url];
+		if (oldNode && oldNode.tabId === node.tabId) {
+			// it is already in the tree
+			oldNode.time = node.time;
+			if (oldNode.parent) {
+				// keep it's array of siblings sorted from oldest to youngest
+				var siblings = oldNode.parent.children;
+				siblings.splice(siblings.indexOf(oldNode), 1);
+				siblings.push(oldNode);
+			}
+			thisTree.currentNode[node.tabId] = oldNode;
+			return;
+		}
+
+		// give the node a unique id
+		node.id = nextNodeId();
+
+		// add it to the tree
+		node.children = [];
+		if (!thisTree.root) {
+			thisTree.root = node;
+		} else {
+			if (!thisTree.currentNode[node.tabId]) {
+				node.parent = thisTree.currentNode[node.openerTabId];
+				if (!node.parent) {
+					node.parent = thisTree.currentNode[lastActiveTabId];
 				}
+			} else {
+				node.parent = thisTree.currentNode[node.tabId];
+			}
+			if (!node.parent) {
+				console.error("Couldn't find a parent, defaulting to root as parent!");
+				node.parent = thisTree.root;
+				// throw new Error("Couldn't find a parent!");
+				// let's see about just using the youngestChild as the parent
+			}
+			node.parent.children.push(node);
+		}
 
-				var tab = tabs[0];
+		// add node url to urls hash
+		thisTree.urls[node.url] = node;
 
-				if (typeof TESTING !== "undefined" && TESTING === true) {
-					tab.id = node.tabId;
-				}
+		// traverse to new currentNode
+		thisTree.currentNode[node.tabId] = node;
 
-				// see if the url is already in the tree
-				var oldNode = thisTree.urls[node.url];
-				if (oldNode && oldNode.tabId === node.tabId) {
-					// it is already in the tree
-					oldNode.time = node.time;
-					if (oldNode.parent) {
-						// keep it's array of siblings sorted from oldest to youngest
-						var siblings = oldNode.parent.children;
-						siblings.splice(siblings.indexOf(oldNode), 1);
-						siblings.push(oldNode);
-					}
-					thisTree.currentNode[node.tabId] = oldNode;
-					return;
-				}
+		thisTree.youngestNode = node;
 
-				// give the node a unique id
-				node.id = nextNodeId();
-
-				// add it to the tree
-				node.children = [];
-				if (!thisTree.root) {
-					thisTree.root = node;
-				} else {
-					if (node.title.match(newTabRegex)) {
-						node.parent = thisTree.currentNode[lastActiveTabId];
-						if (!node.parent) {
-							node.parent = thisTree.currentNode[tab.openerTabId];
-						}
-					} else if (thisTree.currentNode[tab.id]) {
-						node.parent = thisTree.currentNode[tab.id];
-					} else if (thisTree.currentNode[tab.openerTabId]) {
-						node.parent = thisTree.currentNode[tab.openerTabId];
-					} else if (thisTree.currentNode[lastActiveTabId]) {
-						node.parent = thisTree.currentNode[lastActiveTabId];
-					}
-					if (!node.parent) {
-						console.error("Couldn't find a parent!");
-						// throw new Error("Couldn't find a parent!");
-						// let's see about just using the youngestChild as the parent
-					}
-					node.parent.children.push(node);
-				}
-
-				// add node url to urls hash
-				thisTree.urls[node.url] = node;
-
-				// traverse to new currentNode
-				thisTree.currentNode[node.tabId] = node;
-
-				thisTree.youngestNode = node;
-
-				// make sure node has all data filled in
-				if (!node.isValid()) {
-					console.error("Tree.prototype.addNode called with invalid node: ", node);
-				}
-			});
+		// make sure node has all data filled in
+		if (!node.isValid()) {
+			console.error("Tree.prototype.addNode called with invalid node: ", node);
+		}
 	};
 
 	Tree.prototype.reset = function () {

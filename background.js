@@ -71,7 +71,7 @@ var Tree;
 			var lv;
 			if (tab.title.match(newTabRegex)) {
 				lv = new Tree.Node({url: tab.url, title: tab.title,
-					time: Date.now(), tabId: tab.id, tabUpdate: true});
+					time: Date.now(), tabId: tab.id, tabUpdate: true, openerTabId: tab.openerTabId});
 				histree.addNode(lv);
 			} else if (lastVisit && lastVisit.url === tab.url &&
 					lastVisit.historyVisit) {
@@ -81,12 +81,12 @@ var Tree;
 					lv.title = tab.title;
 				}
 				lv.tabId = tab.id;
+				lv.openerTabId = tab.openerTabId;
 				histree.addNode(lv);
 			} else {
 				// add some info, let onHistoryItemVisit add it to tree
 				lastVisit = new Tree.Node({url: tab.url, title: tab.title,
-					time: Date.now(), tabId: tab.id, tabUpdate: true});
-				lv = lastVisit;
+					time: Date.now(), tabId: tab.id, tabUpdate: true, openerTabId: tab.openerTabId});
 			}
 		}
 	}

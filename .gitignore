@@ -6,5 +6,6 @@ graphics
 packed_versions
 mockups
 *.xlsx
+*.cpuprofile
 test.html
 v1
