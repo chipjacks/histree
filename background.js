@@ -46,21 +46,26 @@ var tabAliasManager;
 			return;
 		}
 		var alias = this.tabAliases[removedTab];
-		if (alias.orig !== removedTab) {
+		if (alias && alias.orig !== removedTab) {
 			delete this.tabAliases[removedTab];
+		} else if (!alias) {
+			this.tabAliases[addedTab] = {"orig": addedTab, "active": addedTab};
+		} else {
+			alias.active = addedTab;
+			this.tabAliases[addedTab] = alias;
 		}
-		alias.active = addedTab;
-		this.tabAliases[addedTab] = alias;
 	};
 
 	TabAliasManager.prototype.add = function (origTab, activeTab) {
 		var alias = this.tabAliases[origTab];
 		if (!alias) {
-			this.tabAliases[origTab] = {"orig": origTab, "active": activeTab};
+			alias = {"orig": origTab, "active": activeTab};
+			this.tabAliases[origTab] = alias;
 		} else {
 			alias.active = activeTab;
 		}
 		this.tabAliases[activeTab] = alias;
+		return alias;
 	};
 
 	TabAliasManager.prototype.remove = function (removedTab) {
@@ -128,33 +133,43 @@ var tabAliasManager;
 		console.info("Tab updated: tabId = %d, tab = %o, changeInfo = %o", tabId, tab,
 				changeInfo);
 
+		if (changeInfo.status !== 'complete') {
+			return;
+		}
+
 		var tabAlias = tabAliasManager.tabAliases[tabId];
-		if (changeInfo.status === 'complete') {
-			var lv;
-			if (tab.title.match(newTabRegex)) {
-				lv = new Tree.Node({url: tab.url, title: tab.title,
-					time: Date.now(), tabId: tab.id, tabUpdate: true,
-					openerTabId: tabAliasManager.lookupOrig(tab.openerTabId),
-					tabAlias: tabAlias});
-				histree.addNode(lv);
-			} else if (lastVisit && lastVisit.url === tab.url &&
-					lastVisit.historyVisit) {
-				// onHistoryItemVisit already picked it up, add it to tree
-				lv = lastVisit;
-				if (tab.title) {
-					lv.title = tab.title;
-				}
-				lv.tabId = tab.id;
-				lv.tabAlias = tabAlias;
-				lv.openerTabId = tabAliasManager.lookupOrig(tab.openerTabId);
-				histree.addNode(lv);
-			} else {
-				// add some info, let onHistoryItemVisit add it to tree
-				lastVisit = new Tree.Node({url: tab.url, title: tab.title,
-					time: Date.now(), tabId: tab.id, tabUpdate: true,
-					openerTabId: tabAliasManager.lookupOrig(tab.openerTabId),
-					tabAlias: tabAlias});
+		var origOpenerTabId;
+		var lv;
+
+		if (!tabAlias) {
+			tabAlias = tabAliasManager.add(tabId, tabId);
+			console.log("TabAlias added:", tabAlias);
+		}
+		if (tab.openerTabId) {
+			origOpenerTabId = tabAliasManager.lookupOrig(tab.openerTabId);
+		}
+		if (tab.title.match(newTabRegex)) {
+			lv = new Tree.Node({url: tab.url, title: tab.title,
+				time: Date.now(), tabId: tab.id, tabUpdate: true,
+				openerTabId: origOpenerTabId, tabAlias: tabAlias});
+			histree.addNode(lv);
+		} else if (lastVisit && lastVisit.url === tab.url &&
+				lastVisit.historyVisit) {
+			// onHistoryItemVisit already picked it up, add it to tree
+			lv = lastVisit;
+			if (tab.title) {
+				lv.title = tab.title;
 			}
+			lv.tabId = tab.id;
+			lv.tabAlias = tabAlias;
+			lv.openerTabId = origOpenerTabId;
+			console.log(lv);
+			histree.addNode(lv);
+		} else {
+			// add some info, let onHistoryItemVisit add it to tree
+			lastVisit = new Tree.Node({url: tab.url, title: tab.title,
+				time: Date.now(), tabId: tab.id, tabUpdate: true,
+				openerTabId: origOpenerTabId, tabAlias: tabAlias});
 		}
 	}
 	chrome.tabs.onUpdated.addListener(onTabUpdated);
