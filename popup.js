@@ -86,11 +86,19 @@ var HistreeDisplay;
 
 		// Setup event callbacks
 		li.onclick = function () {
-			chrome.tabs.update(node.tabId, {url: node.url}, function () {
-				if (chrome.runtime.lastError) {
-					chrome.tabs.create({url: node.url});
-				}
-			});
+			if (node.tabAlias.active) {
+				chrome.tabs.update(node.tabAlias.active, {url: node.url, active: true}, function (tab) {
+					if (chrome.runtime.lastError) {
+						console.error("Failed to update tab");
+					} else {
+						chrome.windows.update(tab.windowId, {focused: true});
+					}
+				});
+			} else {
+				chrome.tabs.create({url: node.url}, function (tab) {
+					addTabAlias(node.tabAlias.orig, tab.id);
+				});
+			}
 		};
 		li.onmouseover = function () {
 			var host = node.url;
@@ -286,6 +294,13 @@ var HistreeDisplay;
 			});
 	}
 
+	function addTabAlias(origTab, activeTab) {
+		chrome.runtime.getBackgroundPage(
+			function (bgPage) {
+				bgPage.tabAliasManager.add(origTab, activeTab);
+			});
+	}
+
 	var popupLoadComplete = new Event('popupLoadComplete');
 
 	document.addEventListener('DOMContentLoaded',
@@ -310,7 +325,7 @@ var HistreeDisplay;
 									console.error("chrome.tabs.query returned more than 1 active tab.");
 								}
 								var tab = tabs[0];
-								selectNode(histree.currentNode[tab.id]);
+								selectNode(histree.currentNode[bgPage.tabAliasManager.lookupOrig(tab.id)]);
 							});
 					});
 					displayHistree(histree.root);

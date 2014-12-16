@@ -5,6 +5,7 @@
 var histree;
 var lastActiveTabId;
 var Tree;
+var tabAliasManager;
 
 (function () {
 	"use strict";
@@ -12,6 +13,8 @@ var Tree;
 	//------------------------------------------------------------------------------
 	histree = new Tree.Tree();
 	lastActiveTabId = 0;
+	tabAliasManager = new TabAliasManager();
+
 	// stores last visited page for each tab
 	var lastVisit = null,
 		activeTabId = 0;
@@ -27,6 +30,64 @@ var Tree;
 		console.info("Histree extension starting");
 	}
 	chrome.runtime.onStartup.addListener(startup);
+
+
+	//------------------------------------------------------------------------------
+	// TabAliasManager Class for mapping between active tabId's and the
+	// corresponding original tabId's found in histree. Allows new tabs
+	// to be associated with old histree branches as tabs are closed and reopened.
+	function TabAliasManager() {
+		this.tabAliases = {};
+	}
+
+	TabAliasManager.prototype.update = function (addedTab, removedTab) {
+		if (!removedTab) {
+			this.tabAliases[addedTab] = {"orig": addedTab, "active": addedTab};
+			return;
+		}
+		var alias = this.tabAliases[removedTab];
+		if (alias.orig !== removedTab) {
+			delete this.tabAliases[removedTab];
+		}
+		alias.active = addedTab;
+		this.tabAliases[addedTab] = alias;
+	};
+
+	TabAliasManager.prototype.add = function (origTab, activeTab) {
+		var alias = this.tabAliases[origTab];
+		if (!alias) {
+			this.tabAliases[origTab] = {"orig": origTab, "active": activeTab};
+		} else {
+			alias.active = activeTab;
+		}
+		this.tabAliases[activeTab] = alias;
+	};
+
+	TabAliasManager.prototype.remove = function (removedTab) {
+		var alias = this.tabAliases[removedTab];
+		if (!alias) {
+			return;
+		}
+		alias.active = null;
+		if (alias.orig !== removedTab) {
+			delete this.tabAliases[removedTab];
+		}
+	};
+
+	TabAliasManager.prototype.lookupActive = function (origTab) {
+		return this.tabAliases[origTab].active;
+	};
+
+	TabAliasManager.prototype.lookupOrig = function (activeTab) {
+		var alias = this.tabAliases[activeTab];
+		if (alias) {
+			return alias.orig;
+		}
+		else {
+			this.tabAliases[activeTab] = {"orig": activeTab, "active": activeTab};
+			return activeTab;
+		}
+	};
 
 	//------------------------------------------------------------------------------
 	// Callbacks for recording page visits and adding them to histree
@@ -67,11 +128,14 @@ var Tree;
 		console.info("Tab updated: tabId = %d, tab = %o, changeInfo = %o", tabId, tab,
 				changeInfo);
 
+		var tabAlias = tabAliasManager.tabAliases[tabId];
 		if (changeInfo.status === 'complete') {
 			var lv;
 			if (tab.title.match(newTabRegex)) {
 				lv = new Tree.Node({url: tab.url, title: tab.title,
-					time: Date.now(), tabId: tab.id, tabUpdate: true, openerTabId: tab.openerTabId});
+					time: Date.now(), tabId: tab.id, tabUpdate: true,
+					openerTabId: tabAliasManager.lookupOrig(tab.openerTabId),
+					tabAlias: tabAlias});
 				histree.addNode(lv);
 			} else if (lastVisit && lastVisit.url === tab.url &&
 					lastVisit.historyVisit) {
@@ -81,12 +145,15 @@ var Tree;
 					lv.title = tab.title;
 				}
 				lv.tabId = tab.id;
-				lv.openerTabId = tab.openerTabId;
+				lv.tabAlias = tabAlias;
+				lv.openerTabId = tabAliasManager.lookupOrig(tab.openerTabId);
 				histree.addNode(lv);
 			} else {
 				// add some info, let onHistoryItemVisit add it to tree
 				lastVisit = new Tree.Node({url: tab.url, title: tab.title,
-					time: Date.now(), tabId: tab.id, tabUpdate: true, openerTabId: tab.openerTabId});
+					time: Date.now(), tabId: tab.id, tabUpdate: true,
+					openerTabId: tabAliasManager.lookupOrig(tab.openerTabId),
+					tabAlias: tabAlias});
 			}
 		}
 	}
@@ -97,7 +164,7 @@ var Tree;
 
 	function onTabActivated(activeInfo) {
 		lastActiveTabId = activeTabId;
-		activeTabId = activeInfo.tabId;
+		activeTabId = tabAliasManager.lookupOrig(activeInfo.tabId);
 	}
 	chrome.tabs.onActivated.addListener(onTabActivated);
 
@@ -109,16 +176,15 @@ var Tree;
 	function onTabRemoved(tabId, removeInfo) {
 		// tab was closed, cleanup histree data
 		console.info("Tab removed: tabId = %d, removeInfo = %o", tabId, removeInfo);
+		tabAliasManager.remove(tabId);
 	}
 	chrome.tabs.onRemoved.addListener(onTabRemoved);
 
 	function onTabReplaced(addedTabId, removedTabId) {
 		console.info("Tab replaced: addedTabId = %d, removedTabId = %d", addedTabId, removedTabId);
-		histree.currentNode[addedTabId] = histree.currentNode[removedTabId];
+		tabAliasManager.update(addedTabId, removedTabId);
+		// histree.currentNode[addedTabId] = histree.currentNode[removedTabId];
 	}
 	chrome.tabs.onReplaced.addListener(onTabReplaced);
 
-	return {
-		histree: histree
-	};
 })();

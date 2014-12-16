@@ -29,7 +29,7 @@ var Tree = (function () {
 
 		// see if the url is already in the tree
 		var oldNode = thisTree.urls[node.url];
-		if (oldNode && oldNode.tabId === node.tabId) {
+		if (oldNode && oldNode.tabAlias.orig === node.tabAlias.orig) {
 			// it is already in the tree
 			oldNode.time = node.time;
 			if (oldNode.parent) {
@@ -38,7 +38,7 @@ var Tree = (function () {
 				siblings.splice(siblings.indexOf(oldNode), 1);
 				siblings.push(oldNode);
 			}
-			thisTree.currentNode[node.tabId] = oldNode;
+			thisTree.currentNode[node.tabAlias.orig] = oldNode;
 			return;
 		}
 
@@ -50,19 +50,17 @@ var Tree = (function () {
 		if (!thisTree.root) {
 			thisTree.root = node;
 		} else {
-			if (!thisTree.currentNode[node.tabId]) {
+			if (!thisTree.currentNode[node.tabAlias.orig]) {
 				node.parent = thisTree.currentNode[node.openerTabId];
 				if (!node.parent) {
 					node.parent = thisTree.currentNode[lastActiveTabId];
 				}
 			} else {
-				node.parent = thisTree.currentNode[node.tabId];
+				node.parent = thisTree.currentNode[node.tabAlias.orig];
 			}
 			if (!node.parent) {
 				console.error("Couldn't find a parent, defaulting to root as parent!");
 				node.parent = thisTree.root;
-				// throw new Error("Couldn't find a parent!");
-				// let's see about just using the youngestChild as the parent
 			}
 			node.parent.children.push(node);
 		}
@@ -71,7 +69,7 @@ var Tree = (function () {
 		thisTree.urls[node.url] = node;
 
 		// traverse to new currentNode
-		thisTree.currentNode[node.tabId] = node;
+		thisTree.currentNode[node.tabAlias.orig] = node;
 
 		thisTree.youngestNode = node;
 
@@ -106,6 +104,7 @@ var Tree = (function () {
 			this.time &&
 			this.id &&
 			this.children &&
+			this.tabAlias &&
 			this.tabId		// may not be needed?
 		);
 	};
