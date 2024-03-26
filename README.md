@@ -4,5 +4,5 @@ View and navigate all the branches of your histree.
 
 Currently in alpha stages.
 
-Visit [chipjacks.com](http://chipjacks.com/projects/2014/03/13/histree.html) for
+Visit [chipjacks.com](https://chipjacks.com/posts/histree.html) for
 more info.
